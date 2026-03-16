@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/scrape-tgp",
+      "schedule": "0 20 * * *"
+    }
+  ]
+}

@@ -106,12 +106,10 @@ export default function VehicleDocuments({ vehicleId, userId }: { vehicleId: str
             ))}
           </SelectContent>
         </Select>
-        <label className="cursor-pointer">
+        <label className={`cursor-pointer inline-flex items-center gap-2 px-3 py-1.5 rounded-md border border-slate-700 text-slate-300 hover:text-white text-sm transition-colors ${uploading ? 'opacity-50 pointer-events-none' : 'hover:border-slate-500'}`}>
           <input ref={fileRef} type="file" className="hidden" onChange={handleUpload} disabled={uploading}
             accept=".pdf,.jpg,.jpeg,.png,.heic,.doc,.docx" />
-          <Button asChild variant="outline" size="sm" className="border-slate-700 text-slate-300 hover:text-white gap-2" disabled={uploading}>
-            <span><Upload size={14} /> {uploading ? 'Uploading…' : 'Upload File'}</span>
-          </Button>
+          <Upload size={14} /> {uploading ? 'Uploading…' : 'Upload File'}
         </label>
       </div>
 

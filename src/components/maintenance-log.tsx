@@ -120,23 +120,45 @@ export default function MaintenanceLog({ vehicleId, userId }: { vehicleId: strin
     loadRecords()
   }
 
-  const totalCost = records
-    .filter(r => r.status === 'completed' && r.cost)
-    .reduce((sum, r) => sum + (r.cost ?? 0), 0)
-
-  const typeLabel = (val: string) => TYPES.find(t => t.value === val)?.label ?? val
+  const currentYear = new Date().getFullYear()
 
   const completed = records.filter(r => r.status === 'completed')
   const scheduled = records.filter(r => r.status === 'scheduled')
 
+  const ytdCost = completed
+    .filter(r => r.cost && new Date(r.date).getFullYear() === currentYear)
+    .reduce((sum, r) => sum + (r.cost ?? 0), 0)
+
+  const lifetimeCost = completed
+    .filter(r => r.cost)
+    .reduce((sum, r) => sum + (r.cost ?? 0), 0)
+
+  const scheduledCost = scheduled
+    .filter(r => r.cost)
+    .reduce((sum, r) => sum + (r.cost ?? 0), 0)
+
+  const typeLabel = (val: string) => TYPES.find(t => t.value === val)?.label ?? val
+
+  const fmt = (n: number) => `$${n.toLocaleString('en-AU', { minimumFractionDigits: 2 })}`
+
   return (
     <div className="space-y-5">
       {/* Summary bar */}
-      <div className="flex items-center gap-6 text-sm">
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
         <div className="flex items-center gap-2 text-slate-400">
           <DollarSign size={14} className="text-green-400" />
-          <span>Total cost: <span className="text-white font-semibold">${totalCost.toLocaleString('en-AU', { minimumFractionDigits: 2 })}</span></span>
+          <span>YTD: <span className="text-white font-semibold">{fmt(ytdCost)}</span></span>
         </div>
+        <div className="flex items-center gap-2 text-slate-400">
+          <DollarSign size={14} className="text-emerald-500" />
+          <span>Lifetime: <span className="text-white font-semibold">{fmt(lifetimeCost)}</span></span>
+        </div>
+        {scheduledCost > 0 && (
+          <div className="flex items-center gap-2 text-slate-400">
+            <DollarSign size={14} className="text-amber-400" />
+            <span>Est. upcoming: <span className="text-amber-300 font-semibold">{fmt(scheduledCost)}</span></span>
+          </div>
+        )}
         <div className="flex items-center gap-2 text-slate-400">
           <Wrench size={14} className="text-blue-400" />
           <span>{completed.length} completed</span>

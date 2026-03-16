@@ -25,6 +25,7 @@ export default function VehicleDetailPage() {
   const [vehicle, setVehicle] = useState<Vehicle | null>(null)
   const [userId, setUserId] = useState<string | null>(null)
   const [form, setForm] = useState<Record<string, string>>({})
+  const [scannedCosts, setScannedCosts] = useState<{ rego?: number; insurance?: number }>({})
 
   useEffect(() => {
     async function load() {
@@ -221,12 +222,58 @@ export default function VehicleDetailPage() {
         </Button>
       </form>
 
+      {/* Scanned costs banner */}
+      {(scannedCosts.rego !== undefined || scannedCosts.insurance !== undefined) && (
+        <div className="flex flex-wrap items-center gap-4 rounded-lg border border-amber-700/40 bg-amber-950/20 px-4 py-2.5 text-sm text-amber-300">
+          <span>💰</span>
+          {scannedCosts.rego !== undefined && (
+            <span>Rego cost: <strong>${scannedCosts.rego.toLocaleString('en-AU', { minimumFractionDigits: 2 })}</strong></span>
+          )}
+          {scannedCosts.rego !== undefined && scannedCosts.insurance !== undefined && (
+            <span className="text-amber-600">|</span>
+          )}
+          {scannedCosts.insurance !== undefined && (
+            <span>Insurance premium: <strong>${scannedCosts.insurance.toLocaleString('en-AU', { minimumFractionDigits: 2 })}</strong></span>
+          )}
+        </div>
+      )}
+
       {/* Documents */}
       {userId && (
         <Card className="bg-slate-900 border-slate-800">
           <CardHeader><CardTitle className="text-white text-base">Documents</CardTitle></CardHeader>
           <CardContent>
-            <VehicleDocuments vehicleId={params.id as string} userId={userId} />
+            <VehicleDocuments
+              vehicleId={params.id as string}
+              userId={userId}
+              onScanResult={(category, data) => {
+                if (category === 'rego') {
+                  setForm(f => ({
+                    ...f,
+                    ...(data.expiry_date ? { rego_expiry: data.expiry_date as string } : {}),
+                    ...(data.vehicle_make ? { make: data.vehicle_make as string } : {}),
+                    ...(data.vehicle_model ? { model: data.vehicle_model as string } : {}),
+                    ...(data.vehicle_year ? { year: String(data.vehicle_year) } : {}),
+                    ...(data.vehicle_rego ? { registration_plate: data.vehicle_rego as string } : {}),
+                  }))
+                  if (typeof data.registration_cost === 'number') {
+                    setScannedCosts(c => ({ ...c, rego: data.registration_cost as number }))
+                  }
+                  toast.success('Rego details extracted — review and save')
+                }
+                if (category === 'insurance') {
+                  setForm(f => ({
+                    ...f,
+                    ...(data.expiry_date ? { insurance_expiry: data.expiry_date as string } : {}),
+                    ...(data.insurer_name ? { insurance_provider: data.insurer_name as string } : {}),
+                  }))
+                  if (typeof data.premium_amount === 'number') {
+                    setScannedCosts(c => ({ ...c, insurance: data.premium_amount as number }))
+                  }
+                  toast.success('Insurance details extracted — review and save')
+                }
+              }}
+            />
           </CardContent>
         </Card>
       )}

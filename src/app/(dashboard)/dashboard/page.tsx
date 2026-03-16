@@ -1,9 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { getComplianceItems } from '@/lib/utils/compliance'
 import { ComplianceBadge } from '@/components/compliance-badge'
-import { Truck, ShieldCheck, Fuel, AlertTriangle } from 'lucide-react'
+import { Truck, ShieldCheck, Fuel, AlertTriangle, Wrench } from 'lucide-react'
 import Link from 'next/link'
 import { format, parseISO } from 'date-fns'
 import type { Vehicle, TGPPrice } from '@/lib/types'
@@ -12,9 +11,16 @@ export default async function DashboardPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  const [{ data: vehicles }, { data: tgpToday }] = await Promise.all([
+  const [{ data: vehicles }, { data: tgpToday }, { data: scheduledMaint }] = await Promise.all([
     supabase.from('vehicles').select('*').eq('user_id', user!.id),
     supabase.from('tgp_prices').select('*').order('date', { ascending: false }).limit(5),
+    supabase.from('maintenance_records')
+      .select('id, description, date, type, vehicle_id, vehicles(nickname, registration_plate)')
+      .eq('user_id', user!.id)
+      .eq('status', 'scheduled')
+      .gte('date', new Date().toISOString().split('T')[0])
+      .order('date', { ascending: true })
+      .limit(5),
   ])
 
   const items = getComplianceItems((vehicles as Vehicle[]) || [])
@@ -89,6 +95,36 @@ export default async function DashboardPage() {
         </Card>
       </div>
 
+      {/* Upcoming Maintenance */}
+      {scheduledMaint && scheduledMaint.length > 0 && (
+        <Card className="bg-slate-900 border-slate-800">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Wrench size={18} className="text-amber-400" />
+              <CardTitle className="text-white">Upcoming Maintenance</CardTitle>
+            </div>
+            <Link href="/vehicles" className="text-blue-400 text-sm hover:underline">View vehicles</Link>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {(scheduledMaint as any[]).map((r) => {
+              const v = r.vehicles as { nickname?: string; registration_plate: string } | null
+              const vName = v?.nickname || v?.registration_plate || 'Unknown'
+              return (
+                <div key={r.id} className="flex items-center justify-between p-3 bg-slate-800 rounded-lg">
+                  <div>
+                    <p className="text-white text-sm font-medium">{r.description}</p>
+                    <p className="text-slate-400 text-xs">{vName} · {r.type}</p>
+                  </div>
+                  <span className="text-amber-400 text-sm font-medium shrink-0 ml-4">
+                    {format(parseISO(r.date), 'd MMM yyyy')}
+                  </span>
+                </div>
+              )
+            })}
+          </CardContent>
+        </Card>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Compliance Alerts */}
         <Card className="bg-slate-900 border-slate-800">
@@ -130,7 +166,7 @@ export default async function DashboardPage() {
                 {latestPrices.slice(0, 4).map((row, i) => (
                   <div key={i} className="flex items-center justify-between p-3 bg-slate-800 rounded-lg">
                     <div>
-                      <p className="text-white text-sm font-medium">{row.terminal}</p>
+                      <p className="text-white text-sm font-medium">{row.terminal.replace(/\s*\(.*\)/, '')}</p>
                       <p className="text-slate-400 text-xs">Cheapest: {row.cheapest_provider}</p>
                     </div>
                     <div className="text-right">

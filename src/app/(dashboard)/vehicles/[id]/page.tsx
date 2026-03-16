@@ -12,6 +12,8 @@ import { toast } from 'sonner'
 import { ArrowLeft, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 import type { Vehicle } from '@/lib/types'
+import VehicleDocuments from '@/components/vehicle-documents'
+import MaintenanceLog from '@/components/maintenance-log'
 
 const STATES = ['NSW','VIC','QLD','SA','WA','TAS','NT','ACT']
 const TYPES  = ['truck','trailer','ute','van','other']
@@ -21,11 +23,14 @@ export default function VehicleDetailPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [vehicle, setVehicle] = useState<Vehicle | null>(null)
+  const [userId, setUserId] = useState<string | null>(null)
   const [form, setForm] = useState<Record<string, string>>({})
 
   useEffect(() => {
     async function load() {
       const sb = createClient()
+      const { data: { user } } = await sb.auth.getUser()
+      if (user) setUserId(user.id)
       const { data } = await sb.from('vehicles').select('*').eq('id', params.id).single()
       if (data) {
         setVehicle(data)
@@ -215,6 +220,26 @@ export default function VehicleDetailPage() {
           {loading ? 'Saving…' : 'Save Changes'}
         </Button>
       </form>
+
+      {/* Documents */}
+      {userId && (
+        <Card className="bg-slate-900 border-slate-800">
+          <CardHeader><CardTitle className="text-white text-base">Documents</CardTitle></CardHeader>
+          <CardContent>
+            <VehicleDocuments vehicleId={params.id as string} userId={userId} />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Maintenance & Operating Costs */}
+      {userId && (
+        <Card className="bg-slate-900 border-slate-800">
+          <CardHeader><CardTitle className="text-white text-base">Maintenance & Operating Costs</CardTitle></CardHeader>
+          <CardContent>
+            <MaintenanceLog vehicleId={params.id as string} userId={userId} />
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }

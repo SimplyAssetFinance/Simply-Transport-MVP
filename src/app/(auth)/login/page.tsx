@@ -22,11 +22,10 @@ export default function LoginPage() {
     const { error } = await sb.auth.signInWithPassword({ email, password })
     if (error) {
       toast.error(error.message)
+      setLoading(false)
     } else {
-      router.push('/dashboard')
-      router.refresh()
+      window.location.href = '/dashboard'
     }
-    setLoading(false)
   }
 
   return (

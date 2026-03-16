@@ -2,7 +2,8 @@ import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { getComplianceItems } from '@/lib/utils/compliance'
 import { ComplianceBadge } from '@/components/compliance-badge'
-import { Truck, ShieldCheck, AlertTriangle, Wrench, DollarSign, FileWarning } from 'lucide-react'
+import { Truck, ShieldCheck, Wrench, DollarSign, FileWarning } from 'lucide-react'
+import { ComplianceHoverTile } from '@/components/compliance-hover-tile'
 import Link from 'next/link'
 import { format, parseISO, addDays, differenceInDays } from 'date-fns'
 import type { Vehicle, TGPPrice } from '@/lib/types'
@@ -99,73 +100,8 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Overdue — hover to see list */}
-        <div className="relative group">
-          <Card className="bg-slate-900 border-slate-800 transition-colors group-hover:border-red-500/40 cursor-default">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-slate-400 text-sm font-medium">Overdue</CardTitle>
-              <AlertTriangle size={18} className="text-red-400" />
-            </CardHeader>
-            <CardContent>
-              <p className={`text-3xl font-bold ${overdue.length > 0 ? 'text-red-400' : 'text-white'}`}>{overdue.length}</p>
-              <p className="text-slate-500 text-xs mt-1">
-                {overdue.length > 0 ? 'hover to see details' : 'compliance items'}
-              </p>
-            </CardContent>
-          </Card>
-          {overdue.length > 0 && (
-            <div className="absolute top-full left-0 right-0 z-50 mt-2 hidden group-hover:block">
-              <div className="bg-slate-800 border border-red-500/30 rounded-xl shadow-2xl p-3 space-y-2">
-                <p className="text-red-400 text-xs font-semibold uppercase tracking-wide mb-1">Overdue Items</p>
-                {overdue.map((item, i) => (
-                  <div key={i} className="flex items-center justify-between py-1 border-b border-slate-700/50 last:border-0">
-                    <div>
-                      <p className="text-white text-sm font-medium">{item.vehicleName}</p>
-                      <p className="text-slate-400 text-xs capitalize">{item.type}</p>
-                    </div>
-                    <span className="text-red-400 text-xs font-medium shrink-0 ml-3">
-                      {format(parseISO(item.dueDate), 'd MMM yyyy')}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Due This Week — hover to see list */}
-        <div className="relative group">
-          <Card className="bg-slate-900 border-slate-800 transition-colors group-hover:border-amber-500/40 cursor-default">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-slate-400 text-sm font-medium">Due This Week</CardTitle>
-              <ShieldCheck size={18} className="text-amber-400" />
-            </CardHeader>
-            <CardContent>
-              <p className={`text-3xl font-bold ${dueWeek.length > 0 ? 'text-amber-400' : 'text-white'}`}>{dueWeek.length}</p>
-              <p className="text-slate-500 text-xs mt-1">
-                {dueWeek.length > 0 ? 'hover to see details' : `${dueMonth.length} more this month`}
-              </p>
-            </CardContent>
-          </Card>
-          {dueWeek.length > 0 && (
-            <div className="absolute top-full left-0 right-0 z-50 mt-2 hidden group-hover:block">
-              <div className="bg-slate-800 border border-amber-500/30 rounded-xl shadow-2xl p-3 space-y-2">
-                <p className="text-amber-400 text-xs font-semibold uppercase tracking-wide mb-1">Due This Week</p>
-                {dueWeek.map((item, i) => (
-                  <div key={i} className="flex items-center justify-between py-1 border-b border-slate-700/50 last:border-0">
-                    <div>
-                      <p className="text-white text-sm font-medium">{item.vehicleName}</p>
-                      <p className="text-slate-400 text-xs capitalize">{item.type}</p>
-                    </div>
-                    <span className="text-amber-400 text-xs font-medium shrink-0 ml-3">
-                      {format(parseISO(item.dueDate), 'd MMM yyyy')}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
+        <ComplianceHoverTile variant="overdue"   items={overdue}  />
+        <ComplianceHoverTile variant="due-week" items={dueWeek} extraCount={dueMonth.length} />
       </div>
 
       {/* Upcoming Maintenance */}

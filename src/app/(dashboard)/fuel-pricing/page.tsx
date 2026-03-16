@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
-import { format, parseISO } from 'date-fns'
+import { format, parseISO, addDays } from 'date-fns'
 import type { TGPPrice } from '@/lib/types'
 
 const TERMINALS = [
@@ -14,6 +14,11 @@ const TERMINALS = [
   'Adelaide (Birkenhead)',
   'Perth (Kwinana)',
 ]
+
+// Strip suburb — "Sydney (Silverwater)" → "Sydney"
+function displayTerminal(t: string) {
+  return t.replace(/\s*\(.*\)/, '')
+}
 
 const COLORS = { 'Shell Viva': '#f97316', BP: '#3b82f6', Ampol: '#22c55e' }
 
@@ -44,6 +49,12 @@ export default function FuelPricingPage() {
     return { terminal, row }
   })
 
+  // "As of" date = collected date + 1 (prices are effective the following day)
+  const latestDate = prices[0]?.date
+  const asOfDate = latestDate
+    ? format(addDays(parseISO(latestDate), 1), 'd MMM yyyy')
+    : null
+
   // Chart data for selected terminal
   const days = parseInt(period)
   const chartData = prices
@@ -67,7 +78,12 @@ export default function FuelPricingPage() {
       {/* Today's price table */}
       <Card className="bg-slate-900 border-slate-800">
         <CardHeader>
-          <CardTitle className="text-white">Today's Prices — All Terminals</CardTitle>
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <CardTitle className="text-white">Terminal Gate Prices — All Terminals</CardTitle>
+            {asOfDate && (
+              <span className="text-sm text-slate-400">As of {asOfDate}</span>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
@@ -85,7 +101,7 @@ export default function FuelPricingPage() {
               <tbody>
                 {latestByTerminal.map(({ terminal, row }) => (
                   <tr key={terminal} className="border-b border-slate-800/50 hover:bg-slate-800/30 transition-colors">
-                    <td className="py-3 pr-4 text-white font-medium">{terminal}</td>
+                    <td className="py-3 pr-4 text-white font-medium">{displayTerminal(terminal)}</td>
                     <td className="py-3 px-4 text-right text-slate-300">{row?.shell_viva ?? '—'}</td>
                     <td className="py-3 px-4 text-right text-slate-300">{row?.bp ?? '—'}</td>
                     <td className="py-3 px-4 text-right text-slate-300">{row?.ampol ?? '—'}</td>
@@ -117,7 +133,7 @@ export default function FuelPricingPage() {
                 </SelectTrigger>
                 <SelectContent className="bg-slate-800 border-slate-700">
                   {TERMINALS.map(t => (
-                    <SelectItem key={t} value={t} className="text-white">{t}</SelectItem>
+                    <SelectItem key={t} value={t} className="text-white">{displayTerminal(t)}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

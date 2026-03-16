@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
-import { LayoutDashboard, Truck, ShieldCheck, Fuel, Settings, LogOut } from 'lucide-react'
+import { LayoutDashboard, Truck, ShieldCheck, Fuel, Settings, LogOut, FolderOpen } from 'lucide-react'
 import { toast } from 'sonner'
 
 const nav = [
@@ -11,6 +11,7 @@ const nav = [
   { href: '/vehicles',      label: 'Vehicles',     icon: Truck },
   { href: '/compliance',    label: 'Compliance',   icon: ShieldCheck },
   { href: '/fuel-pricing',  label: 'Fuel Pricing', icon: Fuel },
+  { href: '/documents',     label: 'Documents',    icon: FolderOpen },
   { href: '/settings',      label: 'Settings',     icon: Settings },
 ]
 

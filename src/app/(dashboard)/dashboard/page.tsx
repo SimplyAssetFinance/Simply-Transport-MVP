@@ -2,26 +2,72 @@ import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { getComplianceItems } from '@/lib/utils/compliance'
 import { ComplianceBadge } from '@/components/compliance-badge'
-import { Truck, ShieldCheck, Fuel, AlertTriangle, Wrench } from 'lucide-react'
+import { Truck, ShieldCheck, Fuel, AlertTriangle, Wrench, DollarSign, FileWarning } from 'lucide-react'
 import Link from 'next/link'
-import { format, parseISO } from 'date-fns'
+import { format, parseISO, addDays, differenceInDays } from 'date-fns'
 import type { Vehicle, TGPPrice } from '@/lib/types'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  const [{ data: vehicles }, { data: tgpToday }, { data: scheduledMaint }] = await Promise.all([
+  const today = new Date()
+  const currentYear = today.getFullYear()
+  const todayStr = today.toISOString().split('T')[0]
+  const day30 = addDays(today, 30).toISOString().split('T')[0]
+  const day60 = addDays(today, 60).toISOString().split('T')[0]
+  const day90 = addDays(today, 90).toISOString().split('T')[0]
+
+  const day28 = addDays(today, 28).toISOString().split('T')[0]
+
+  const [
+    { data: vehicles },
+    { data: tgpToday },
+    { data: scheduledMaint },
+    { data: costCompleted },
+    { data: costForecast },
+    { data: dueDocs },
+  ] = await Promise.all([
     supabase.from('vehicles').select('*').eq('user_id', user!.id),
     supabase.from('tgp_prices').select('*').order('date', { ascending: false }).limit(5),
     supabase.from('maintenance_records')
       .select('id, description, date, type, vehicle_id, vehicles(nickname, registration_plate)')
       .eq('user_id', user!.id)
       .eq('status', 'scheduled')
-      .gte('date', new Date().toISOString().split('T')[0])
+      .gte('date', todayStr)
       .order('date', { ascending: true })
       .limit(5),
+    supabase.from('maintenance_records')
+      .select('cost, date')
+      .eq('user_id', user!.id)
+      .eq('status', 'completed')
+      .not('cost', 'is', null),
+    supabase.from('maintenance_records')
+      .select('cost, date')
+      .eq('user_id', user!.id)
+      .eq('status', 'scheduled')
+      .gte('date', todayStr)
+      .lte('date', day90)
+      .not('cost', 'is', null),
+    supabase.from('business_documents')
+      .select('id, name, category, due_date, reminder_note')
+      .eq('user_id', user!.id)
+      .not('due_date', 'is', null)
+      .lte('due_date', day28)
+      .order('due_date', { ascending: true }),
   ])
+
+  // Operating cost calculations
+  const completed = (costCompleted as { cost: number; date: string }[]) || []
+  const forecast  = (costForecast  as { cost: number; date: string }[]) || []
+
+  const ytdCost      = completed.filter(r => new Date(r.date).getFullYear() === currentYear).reduce((s, r) => s + r.cost, 0)
+  const lifetimeCost = completed.reduce((s, r) => s + r.cost, 0)
+  const next30Cost   = forecast.filter(r => r.date <= day30).reduce((s, r) => s + r.cost, 0)
+  const next60Cost   = forecast.filter(r => r.date <= day60).reduce((s, r) => s + r.cost, 0)
+  const next90Cost   = forecast.filter(r => r.date <= day90).reduce((s, r) => s + r.cost, 0)
+
+  const fmt = (n: number) => `$${n.toLocaleString('en-AU', { minimumFractionDigits: 2 })}`
 
   const items = getComplianceItems((vehicles as Vehicle[]) || [])
   const overdue    = items.filter(i => i.status === 'overdue')
@@ -124,6 +170,83 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Document Alerts */}
+      {dueDocs && dueDocs.length > 0 && (
+        <Card className="bg-slate-900 border-slate-800">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div className="flex items-center gap-2">
+              <FileWarning size={18} className="text-amber-400" />
+              <CardTitle className="text-white">Document Reminders</CardTitle>
+            </div>
+            <Link href="/documents" className="text-blue-400 text-sm hover:underline">View all</Link>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {(dueDocs as { id: string; name: string; category: string; due_date: string; reminder_note: string | null }[]).map((doc) => {
+              const days = differenceInDays(parseISO(doc.due_date), today)
+              const isOverdue = days < 0
+              const isUrgent = days <= 7
+              return (
+                <div key={doc.id} className="flex items-center justify-between p-3 bg-slate-800 rounded-lg">
+                  <div>
+                    <p className="text-white text-sm font-medium">{doc.name}</p>
+                    <p className="text-slate-400 text-xs">
+                      {doc.category.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
+                      {doc.reminder_note ? ` · ${doc.reminder_note}` : ''}
+                    </p>
+                  </div>
+                  <span className={`text-sm font-medium shrink-0 ml-4 ${isOverdue ? 'text-red-400' : isUrgent ? 'text-orange-400' : 'text-amber-400'}`}>
+                    {isOverdue ? 'Overdue' : days === 0 ? 'Due today' : days === 1 ? 'Tomorrow' : `${days}d`}
+                  </span>
+                </div>
+              )
+            })}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Operating Costs */}
+      <Card className="bg-slate-900 border-slate-800">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div className="flex items-center gap-2">
+            <DollarSign size={18} className="text-green-400" />
+            <CardTitle className="text-white">Operating Costs</CardTitle>
+          </div>
+          <Link href="/vehicles" className="text-blue-400 text-sm hover:underline">View vehicles</Link>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            {/* Actuals */}
+            <div className="space-y-3">
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Actuals</p>
+              <div className="flex items-center justify-between p-3 bg-slate-800 rounded-lg">
+                <span className="text-slate-400 text-sm">Year to Date ({currentYear})</span>
+                <span className="text-white font-bold">{fmt(ytdCost)}</span>
+              </div>
+              <div className="flex items-center justify-between p-3 bg-slate-800 rounded-lg">
+                <span className="text-slate-400 text-sm">Lifetime Total</span>
+                <span className="text-white font-bold">{fmt(lifetimeCost)}</span>
+              </div>
+            </div>
+            {/* Forecast */}
+            <div className="space-y-3">
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Forecast (Scheduled)</p>
+              <div className="flex items-center justify-between p-3 bg-slate-800 rounded-lg">
+                <span className="text-slate-400 text-sm">Next 30 days</span>
+                <span className={`font-bold ${next30Cost > 0 ? 'text-amber-400' : 'text-slate-500'}`}>{fmt(next30Cost)}</span>
+              </div>
+              <div className="flex items-center justify-between p-3 bg-slate-800 rounded-lg">
+                <span className="text-slate-400 text-sm">Next 60 days</span>
+                <span className={`font-bold ${next60Cost > 0 ? 'text-amber-400' : 'text-slate-500'}`}>{fmt(next60Cost)}</span>
+              </div>
+              <div className="flex items-center justify-between p-3 bg-slate-800 rounded-lg">
+                <span className="text-slate-400 text-sm">Next 90 days</span>
+                <span className={`font-bold ${next90Cost > 0 ? 'text-amber-400' : 'text-slate-500'}`}>{fmt(next90Cost)}</span>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Compliance Alerts */}

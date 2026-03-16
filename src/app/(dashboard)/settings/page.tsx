@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { User, CreditCard } from 'lucide-react'
+import { FuelSettings } from './fuel-settings'
 
 export default async function SettingsPage() {
   const supabase = await createClient()
@@ -63,6 +64,8 @@ export default async function SettingsPage() {
           <p className="text-slate-500 text-xs">Stripe billing coming soon</p>
         </CardContent>
       </Card>
+
+      <FuelSettings />
     </div>
   )
 }

@@ -1,5 +1,6 @@
 'use client'
 import { useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { AlertTriangle, ShieldCheck } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import type { ComplianceItem } from '@/lib/types'
@@ -13,23 +14,35 @@ interface Props {
 export function ComplianceHoverTile({ variant, items, extraCount }: Props) {
   const [open, setOpen] = useState(false)
   const timerRef        = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const tileRef         = useRef<HTMLDivElement>(null)
+  const [dropPos, setDropPos] = useState({ top: 0, left: 0, width: 0 })
 
   const isOverdue = variant === 'overdue'
   const count     = items.length
 
-  const accentText   = isOverdue ? 'text-red-400'           : 'text-amber-400'
-  const accentBorder = isOverdue ? 'border-red-500/40'      : 'border-amber-500/40'
-  const dropBorder   = isOverdue ? 'border-red-500/30'      : 'border-amber-500/30'
-  const Icon         = isOverdue ? AlertTriangle             : ShieldCheck
-  const iconColor    = isOverdue ? 'text-red-400'            : 'text-amber-400'
+  const accentText   = isOverdue ? 'text-red-400'      : 'text-amber-400'
+  const accentBorder = isOverdue ? 'border-red-500/40'  : 'border-amber-500/40'
+  const dropBorder   = isOverdue ? 'border-red-500/30'  : 'border-amber-500/30'
+  const Icon         = isOverdue ? AlertTriangle         : ShieldCheck
+  const iconColor    = isOverdue ? 'text-red-400'        : 'text-amber-400'
 
   function enter() {
     clearTimeout(timerRef.current)
-    if (count > 0) setOpen(true)
+    if (count > 0) {
+      if (tileRef.current) {
+        const rect = tileRef.current.getBoundingClientRect()
+        setDropPos({
+          top:   rect.bottom + window.scrollY + 4,
+          left:  rect.left   + window.scrollX,
+          width: rect.width,
+        })
+      }
+      setOpen(true)
+    }
   }
 
   function leave() {
-    timerRef.current = setTimeout(() => setOpen(false), 120)
+    timerRef.current = setTimeout(() => setOpen(false), 150)
   }
 
   const subtitle = count > 0
@@ -39,31 +52,36 @@ export function ComplianceHoverTile({ variant, items, extraCount }: Props) {
     : `${extraCount ?? 0} more this month`
 
   return (
-    <div className="relative" onMouseEnter={enter} onMouseLeave={leave}>
-
-      {/* Tile — plain div instead of Card so overflow-hidden doesn't clip */}
-      <div className={`rounded-xl bg-slate-900 ring-1 py-4 px-4 transition-colors cursor-default ${
-        open && count > 0 ? `ring-current ${accentBorder}` : 'ring-foreground/10'
-      }`}>
-        <div className="flex flex-row items-center justify-between pb-2">
-          <p className="text-slate-400 text-sm font-medium">
-            {isOverdue ? 'Overdue' : 'Due This Week'}
-          </p>
-          <Icon size={18} className={iconColor} />
+    <>
+      {/* Tile */}
+      <div ref={tileRef} onMouseEnter={enter} onMouseLeave={leave}>
+        <div className={`rounded-xl bg-slate-900 ring-1 py-4 px-4 transition-colors cursor-default ${
+          open && count > 0 ? `ring-current ${accentBorder}` : 'ring-foreground/10'
+        }`}>
+          <div className="flex flex-row items-center justify-between pb-2">
+            <p className="text-slate-400 text-sm font-medium">
+              {isOverdue ? 'Overdue' : 'Due This Week'}
+            </p>
+            <Icon size={18} className={iconColor} />
+          </div>
+          <p className={`text-3xl font-bold ${count > 0 ? accentText : 'text-white'}`}>{count}</p>
+          <p className="text-slate-500 text-xs mt-1">{subtitle}</p>
         </div>
-        <p className={`text-3xl font-bold ${count > 0 ? accentText : 'text-white'}`}>{count}</p>
-        <p className="text-slate-500 text-xs mt-1">{subtitle}</p>
       </div>
 
-      {/* Dropdown — zero gap so cursor stays within hover area */}
-      {open && count > 0 && (
+      {/* Dropdown rendered at document.body — bypasses all ancestor overflow/stacking constraints */}
+      {open && count > 0 && typeof document !== 'undefined' && createPortal(
         <div
-          className="absolute left-0 right-0 z-[9999] top-full"
+          style={{
+            position: 'absolute',
+            top:      dropPos.top,
+            left:     dropPos.left,
+            width:    dropPos.width,
+            zIndex:   9999,
+          }}
           onMouseEnter={enter}
           onMouseLeave={leave}
         >
-          {/* 4px invisible bridge so there's no gap between tile and dropdown */}
-          <div className="h-1" />
           <div className={`bg-slate-800 border ${dropBorder} rounded-xl shadow-2xl p-3 space-y-1`}>
             <p className={`${accentText} text-xs font-semibold uppercase tracking-wide mb-2`}>
               {isOverdue ? 'Overdue Items' : 'Due This Week'}
@@ -83,8 +101,9 @@ export function ComplianceHoverTile({ variant, items, extraCount }: Props) {
               </div>
             ))}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
-    </div>
+    </>
   )
 }

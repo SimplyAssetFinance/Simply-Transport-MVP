@@ -11,9 +11,17 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { toast } from 'sonner'
 import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
+import { logAudit } from '@/lib/audit'
 
 const STATES = ['NSW','VIC','QLD','SA','WA','TAS','NT','ACT']
-const TYPES  = ['truck','trailer','ute','van','other']
+const TYPES  = [
+  { value: 'truck',       label: 'Truck' },
+  { value: 'prime_mover', label: 'Prime Mover' },
+  { value: 'trailer',     label: 'Trailer' },
+  { value: 'ute',         label: 'Ute' },
+  { value: 'van',         label: 'Van' },
+  { value: 'other',       label: 'Other' },
+]
 
 export default function NewVehiclePage() {
   const router = useRouter()
@@ -55,10 +63,11 @@ export default function NewVehiclePage() {
       notes: form.notes || null,
     }
 
-    const { error } = await sb.from('vehicles').insert(payload)
+    const { data, error } = await sb.from('vehicles').insert(payload).select('id').single()
     if (error) {
       toast.error(error.message)
     } else {
+      await logAudit(sb, 'vehicle_created', 'vehicle', data.id, { registration_plate: form.registration_plate.toUpperCase() })
       toast.success('Vehicle added!')
       router.push('/vehicles')
     }
@@ -114,20 +123,16 @@ export default function NewVehiclePage() {
               <div className="space-y-2">
                 <Label className="text-slate-300">Vehicle Type</Label>
                 <Select value={form.vehicle_type} onValueChange={v => v && set('vehicle_type', v)}>
-                  <SelectTrigger className="bg-slate-800 border-slate-700 text-white">
-                    <SelectValue />
-                  </SelectTrigger>
+                  <SelectTrigger className="bg-slate-800 border-slate-700 text-white"><SelectValue /></SelectTrigger>
                   <SelectContent className="bg-slate-800 border-slate-700">
-                    {TYPES.map(t => <SelectItem key={t} value={t} className="text-white capitalize">{t}</SelectItem>)}
+                    {TYPES.map(t => <SelectItem key={t.value} value={t.value} className="text-white">{t.label}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
                 <Label className="text-slate-300">State</Label>
                 <Select value={form.rego_state} onValueChange={v => v && set('rego_state', v)}>
-                  <SelectTrigger className="bg-slate-800 border-slate-700 text-white">
-                    <SelectValue />
-                  </SelectTrigger>
+                  <SelectTrigger className="bg-slate-800 border-slate-700 text-white"><SelectValue /></SelectTrigger>
                   <SelectContent className="bg-slate-800 border-slate-700">
                     {STATES.map(s => <SelectItem key={s} value={s} className="text-white">{s}</SelectItem>)}
                   </SelectContent>

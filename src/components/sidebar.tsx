@@ -3,16 +3,18 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
-import { LayoutDashboard, Truck, ShieldCheck, Fuel, Settings, LogOut, FolderOpen } from 'lucide-react'
+import { LayoutDashboard, Truck, ShieldCheck, Fuel, Settings, LogOut, FolderOpen, ClipboardList, BarChart3 } from 'lucide-react'
 import { toast } from 'sonner'
 
 const nav = [
-  { href: '/dashboard',     label: 'Dashboard',    icon: LayoutDashboard },
-  { href: '/vehicles',      label: 'Vehicles',     icon: Truck },
-  { href: '/compliance',    label: 'Compliance',   icon: ShieldCheck },
-  { href: '/fuel-pricing',  label: 'Fuel Pricing', icon: Fuel },
-  { href: '/documents',     label: 'Documents',    icon: FolderOpen },
-  { href: '/settings',      label: 'Settings',     icon: Settings },
+  { href: '/dashboard',    label: 'Dashboard',    icon: LayoutDashboard },
+  { href: '/vehicles',     label: 'Vehicles',     icon: Truck },
+  { href: '/compliance',   label: 'Compliance',   icon: ShieldCheck },
+  { href: '/checklists',   label: 'Checklists',   icon: ClipboardList },
+  { href: '/fuel-pricing', label: 'Fuel Pricing', icon: Fuel },
+  { href: '/documents',    label: 'Documents',    icon: FolderOpen },
+  { href: '/reports',      label: 'Reports',      icon: BarChart3 },
+  { href: '/settings',     label: 'Settings',     icon: Settings },
 ]
 
 export function Sidebar() {
@@ -41,7 +43,7 @@ export function Sidebar() {
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 p-4 space-y-1">
+      <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
         {nav.map(({ href, label, icon: Icon }) => (
           <Link
             key={href}

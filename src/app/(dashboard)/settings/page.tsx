@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { User, CreditCard } from 'lucide-react'
 import { FuelSettings } from './fuel-settings'
+import { NotificationSettingsCard } from '@/components/notification-settings'
 
 export default async function SettingsPage() {
   const supabase = await createClient()
@@ -66,6 +67,8 @@ export default async function SettingsPage() {
       </Card>
 
       <FuelSettings />
+
+      <NotificationSettingsCard />
     </div>
   )
 }

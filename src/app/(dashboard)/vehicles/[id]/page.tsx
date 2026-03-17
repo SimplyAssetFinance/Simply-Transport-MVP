@@ -14,9 +14,18 @@ import Link from 'next/link'
 import type { Vehicle } from '@/lib/types'
 import VehicleDocuments from '@/components/vehicle-documents'
 import MaintenanceLog from '@/components/maintenance-log'
+import { KmLogSection } from '@/components/km-log'
+import { logAudit } from '@/lib/audit'
 
 const STATES = ['NSW','VIC','QLD','SA','WA','TAS','NT','ACT']
-const TYPES  = ['truck','trailer','ute','van','other']
+const TYPES  = [
+  { value: 'truck',        label: 'Truck' },
+  { value: 'prime_mover',  label: 'Prime Mover' },
+  { value: 'trailer',      label: 'Trailer' },
+  { value: 'ute',          label: 'Ute' },
+  { value: 'van',          label: 'Van' },
+  { value: 'other',        label: 'Other' },
+]
 
 export default function VehicleDetailPage() {
   const params = useParams()
@@ -82,14 +91,19 @@ export default function VehicleDetailPage() {
       updated_at: new Date().toISOString(),
     }).eq('id', params.id as string)
 
-    if (error) toast.error(error.message)
-    else toast.success('Vehicle updated!')
+    if (error) {
+      toast.error(error.message)
+    } else {
+      await logAudit(sb, 'vehicle_updated', 'vehicle', params.id as string, { nickname: form.nickname })
+      toast.success('Vehicle updated!')
+    }
     setLoading(false)
   }
 
   async function handleDelete() {
     if (!confirm('Delete this vehicle? This cannot be undone.')) return
     const sb = createClient()
+    await logAudit(sb, 'vehicle_deleted', 'vehicle', params.id as string, { nickname: vehicle?.nickname })
     await sb.from('vehicles').delete().eq('id', params.id as string)
     toast.success('Vehicle deleted')
     router.push('/vehicles')
@@ -152,7 +166,7 @@ export default function VehicleDetailPage() {
                 <Select value={form.vehicle_type ?? ''} onValueChange={v => v && set('vehicle_type', v)}>
                   <SelectTrigger className="bg-slate-800 border-slate-700 text-white"><SelectValue /></SelectTrigger>
                   <SelectContent className="bg-slate-800 border-slate-700">
-                    {TYPES.map(t => <SelectItem key={t} value={t} className="text-white capitalize">{t}</SelectItem>)}
+                    {TYPES.map(t => <SelectItem key={t.value} value={t.value} className="text-white">{t.label}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -237,6 +251,21 @@ export default function VehicleDetailPage() {
           )}
         </div>
       )}
+
+      {/* KM Log */}
+      <Card className="bg-slate-900 border-slate-800">
+        <CardHeader><CardTitle className="text-white text-base">KM Log</CardTitle></CardHeader>
+        <CardContent>
+          <KmLogSection
+            vehicleId={params.id as string}
+            currentOdometer={vehicle.current_odometer}
+            onOdometerUpdate={(val) => {
+              setVehicle(v => v ? { ...v, current_odometer: val } : v)
+              setForm(f => ({ ...f, current_odometer: val.toString() }))
+            }}
+          />
+        </CardContent>
+      </Card>
 
       {/* Documents */}
       {userId && (

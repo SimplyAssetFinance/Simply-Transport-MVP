@@ -1,46 +1,31 @@
 'use client'
 import { useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
 import { AlertTriangle, ShieldCheck } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import type { ComplianceItem } from '@/lib/types'
 
 interface Props {
-  variant:    'overdue' | 'due-week'
-  items:      ComplianceItem[]
+  variant:     'overdue' | 'due-week'
+  items:       ComplianceItem[]
   extraCount?: number
 }
 
 export function ComplianceHoverTile({ variant, items, extraCount }: Props) {
-  const [open, setOpen] = useState(false)
-  const timerRef        = useRef<ReturnType<typeof setTimeout>>(undefined)
-  const tileRef         = useRef<HTMLDivElement>(null)
-  const [dropPos, setDropPos] = useState({ top: 0, left: 0, width: 0 })
+  const [open, setOpen]   = useState(false)
+  const timerRef          = useRef<ReturnType<typeof setTimeout>>(undefined)
 
-  const isOverdue = variant === 'overdue'
-  const count     = items.length
-
-  const accentText   = isOverdue ? 'text-red-400'      : 'text-amber-400'
-  const accentBorder = isOverdue ? 'border-red-500/40'  : 'border-amber-500/40'
-  const dropBorder   = isOverdue ? 'border-red-500/30'  : 'border-amber-500/30'
-  const Icon         = isOverdue ? AlertTriangle         : ShieldCheck
-  const iconColor    = isOverdue ? 'text-red-400'        : 'text-amber-400'
+  const isOverdue   = variant === 'overdue'
+  const count       = items.length
+  const accentText  = isOverdue ? 'text-red-400'     : 'text-amber-400'
+  const dropBorder  = isOverdue ? 'border-red-500/30' : 'border-amber-500/30'
+  const Icon        = isOverdue ? AlertTriangle        : ShieldCheck
+  const iconColor   = isOverdue ? 'text-red-400'      : 'text-amber-400'
+  const ringActive  = isOverdue ? 'ring-red-500/40'   : 'ring-amber-500/40'
 
   function enter() {
     clearTimeout(timerRef.current)
-    if (count > 0) {
-      if (tileRef.current) {
-        const rect = tileRef.current.getBoundingClientRect()
-        setDropPos({
-          top:   rect.bottom + 4,
-          left:  rect.left,
-          width: rect.width,
-        })
-      }
-      setOpen(true)
-    }
+    if (count > 0) setOpen(true)
   }
-
   function leave() {
     timerRef.current = setTimeout(() => setOpen(false), 150)
   }
@@ -52,33 +37,31 @@ export function ComplianceHoverTile({ variant, items, extraCount }: Props) {
     : `${extraCount ?? 0} more this month`
 
   return (
-    <>
+    <div
+      className="relative"
+      style={{ zIndex: open && count > 0 ? 100 : undefined }}
+      onMouseEnter={enter}
+      onMouseLeave={leave}
+    >
       {/* Tile */}
-      <div ref={tileRef} onMouseEnter={enter} onMouseLeave={leave}>
-        <div className={`rounded-xl bg-slate-900 ring-1 py-4 px-4 transition-colors cursor-default ${
-          open && count > 0 ? `ring-current ${accentBorder}` : 'ring-foreground/10'
-        }`}>
-          <div className="flex flex-row items-center justify-between pb-2">
-            <p className="text-slate-400 text-sm font-medium">
-              {isOverdue ? 'Overdue' : 'Due This Week'}
-            </p>
-            <Icon size={18} className={iconColor} />
-          </div>
-          <p className={`text-3xl font-bold ${count > 0 ? accentText : 'text-white'}`}>{count}</p>
-          <p className="text-slate-500 text-xs mt-1">{subtitle}</p>
+      <div className={`rounded-xl bg-slate-900 ring-1 py-4 px-4 transition-colors cursor-default ${
+        open && count > 0 ? `ring-1 ${ringActive}` : 'ring-foreground/10'
+      }`}>
+        <div className="flex flex-row items-center justify-between pb-2">
+          <p className="text-slate-400 text-sm font-medium">
+            {isOverdue ? 'Overdue' : 'Due This Week'}
+          </p>
+          <Icon size={18} className={iconColor} />
         </div>
+        <p className={`text-3xl font-bold ${count > 0 ? accentText : 'text-white'}`}>{count}</p>
+        <p className="text-slate-500 text-xs mt-1">{subtitle}</p>
       </div>
 
-      {/* Dropdown rendered at document.body — bypasses all ancestor overflow/stacking constraints */}
-      {open && count > 0 && typeof document !== 'undefined' && createPortal(
+      {/* Dropdown — absolute, below tile, no portal needed (no overflow:hidden in ancestor chain) */}
+      {open && count > 0 && (
         <div
-          style={{
-            position: 'fixed',
-            top:      dropPos.top,
-            left:     dropPos.left,
-            width:    dropPos.width,
-            zIndex:   9999,
-          }}
+          className="absolute left-0 right-0 top-full pt-1"
+          style={{ zIndex: 100 }}
           onMouseEnter={enter}
           onMouseLeave={leave}
         >
@@ -101,9 +84,8 @@ export function ComplianceHoverTile({ variant, items, extraCount }: Props) {
               </div>
             ))}
           </div>
-        </div>,
-        document.body
+        </div>
       )}
-    </>
+    </div>
   )
 }

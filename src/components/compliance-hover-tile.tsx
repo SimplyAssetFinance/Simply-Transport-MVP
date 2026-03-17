@@ -32,8 +32,8 @@ export function ComplianceHoverTile({ variant, items, extraCount }: Props) {
       if (tileRef.current) {
         const rect = tileRef.current.getBoundingClientRect()
         setDropPos({
-          top:   rect.bottom + window.scrollY + 4,
-          left:  rect.left   + window.scrollX,
+          top:   rect.bottom + 4,
+          left:  rect.left,
           width: rect.width,
         })
       }
@@ -73,7 +73,7 @@ export function ComplianceHoverTile({ variant, items, extraCount }: Props) {
       {open && count > 0 && typeof document !== 'undefined' && createPortal(
         <div
           style={{
-            position: 'absolute',
+            position: 'fixed',
             top:      dropPos.top,
             left:     dropPos.left,
             width:    dropPos.width,

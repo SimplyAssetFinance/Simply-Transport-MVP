@@ -3,7 +3,6 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { MapContainer, TileLayer, CircleMarker, Popup, useMapEvents } from 'react-leaflet'
 import type { Map as LeafletMap, LatLngBounds } from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import { format, parseISO } from 'date-fns'
 import type { FuelStation } from '@/app/api/fuel-stations/route'
 
 // ── Map event handler ────────────────────────────────────────────────────────
@@ -175,7 +174,7 @@ export default function FuelMap({ discountCpl }: Props) {
 
                     {s.updated && (
                       <p className="text-xs text-gray-400 pt-1 border-t border-gray-100">
-                        Updated {format(parseISO(s.updated), 'd MMM h:mm a')}
+                        Updated {s.updated}
                       </p>
                     )}
                   </div>

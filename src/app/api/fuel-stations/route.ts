@@ -62,80 +62,57 @@ export async function GET(request: NextRequest) {
   try {
     const token = await getAccessToken()
     const headers = {
-      Authorization:  `Bearer ${token}`,
-      'Content-Type': 'application/json',
+      Authorization:    `Bearer ${token}`,
+      apikey:           NSW_KEY,
+      transactionID:    crypto.randomUUID(),
+      requestTimeStamp: new Date().toISOString().replace('T', ' ').replace('Z', ''),
+      'Content-Type':   'application/json',
     }
 
-    // Fetch all prices + all station reference data in parallel
-    const [pricesRes, refRes] = await Promise.all([
-      fetch(`${NSW_BASE}/FuelPriceCheck/v2/fuel/prices`, {
-        headers,
-        next: { revalidate: 300 },
-      }),
-      fetch(`${NSW_BASE}/FuelCheckRefData/v2/fuel/lovs`, {
-        headers,
-        next: { revalidate: 3600 },
-      }),
-    ])
+    // Single call — the prices endpoint returns both stations (with coords) and prices
+    const res = await fetch(`${NSW_BASE}/FuelPriceCheck/v2/fuel/prices`, {
+      headers,
+      next: { revalidate: 300 },
+    })
 
-    if (!pricesRes.ok) {
-      const msg = await pricesRes.text()
-      throw new Error(`Prices API ${pricesRes.status}: ${msg}`)
-    }
-    if (!refRes.ok) {
-      const msg = await refRes.text()
-      throw new Error(`RefData API ${refRes.status}: ${msg}`)
+    if (!res.ok) {
+      const msg = await res.text()
+      throw new Error(`Prices API ${res.status}: ${msg}`)
     }
 
-    const pricesData = await pricesRes.json()
-    const refData    = await refRes.json()
+    const data = await res.json()
 
-    // ── Build station location index ────────────────────────────────────────
-    // GET /FuelPriceCheck/v2/fuel/prices returns { stations, prices }
-    // GET /FuelCheckRefData/v2/fuel/lovs  returns { stations, fueltypes, brands }
-    // Merge both sources so we have the best chance of finding coordinates
+    // ── Build station location index keyed by code (string) ─────────────────
     type StationMeta = { lat: number; lng: number; name: string; brand: string }
     const stationIndex: Record<string, StationMeta> = {}
 
-    function indexStations(list: any[]) {
-      list.forEach((s: any) => {
-        const code = s.code ?? s.stationcode ?? s.StationCode
-        const lat  = s.location?.latitude  ?? s.Latitude  ?? s.lat  ?? s.latitude
-        const lng  = s.location?.longitude ?? s.Longitude ?? s.lng  ?? s.longitude
-        if (code && lat && lng) {
-          stationIndex[code] = {
-            lat:   Number(lat),
-            lng:   Number(lng),
-            name:  s.name  ?? s.Name  ?? s.stationName  ?? 'Unknown',
-            brand: s.brand ?? s.Brand ?? s.brandName ?? 'Unknown',
-          }
+    const rawStations: any[] = Array.isArray(data.stations) ? data.stations : []
+    for (const s of rawStations) {
+      const code = s.code
+      const lat  = s.location?.latitude
+      const lng  = s.location?.longitude
+      if (code && lat != null && lng != null) {
+        stationIndex[String(code)] = {
+          lat:   Number(lat),
+          lng:   Number(lng),
+          name:  s.name  ?? 'Unknown',
+          brand: s.brand ?? 'Unknown',
         }
-      })
+      }
     }
 
-    const pricesStations: any[] = pricesData.stations ?? pricesData.Stations ?? []
-    const refStations:    any[] = refData.stations    ?? refData.Stations    ?? []
-    indexStations(pricesStations)
-    indexStations(refStations)
+    // ── Filter prices by fuel type + viewport ───────────────────────────────
+    const rawPrices: any[] = Array.isArray(data.prices) ? data.prices : []
 
-    // ── Build price list, filter by fuel type + viewport ───────────────────
-    const allPrices: any[] = pricesData.prices ?? pricesData.Prices ?? []
-
-    const stations: FuelStation[] = allPrices
-      .filter((p: any) => {
-        const ft = p.fueltype ?? p.FuelType ?? p.fuelType ?? ''
-        return ft === fuelCode
-      })
+    const stations: FuelStation[] = rawPrices
+      .filter((p: any) => p.fueltype === fuelCode)
       .map((p: any): FuelStation | null => {
-        const code    = p.stationcode ?? p.StationCode ?? p.stationCode ?? ''
+        const code    = String(p.stationcode)
         const station = stationIndex[code]
         if (!station) return null
 
-        // Price: API returns tenths of a cent (e.g. 1649 → 164.9 c/L)
-        const rawPrice = p.price ?? p.Price ?? null
-        const price    = rawPrice !== null
-          ? parseFloat((rawPrice > 1000 ? rawPrice / 10 : rawPrice).toFixed(1))
-          : null
+        // Price is already in cents/L (e.g. 279.9)
+        const price = p.price != null ? parseFloat(Number(p.price).toFixed(1)) : null
 
         return {
           id:      code,
@@ -144,7 +121,7 @@ export async function GET(request: NextRequest) {
           lat:     station.lat,
           lng:     station.lng,
           price,
-          updated: p.lastupdated ?? p.LastUpdated ?? p.lastUpdated ?? null,
+          updated: p.lastupdated ?? null,
         }
       })
       .filter((s): s is FuelStation =>

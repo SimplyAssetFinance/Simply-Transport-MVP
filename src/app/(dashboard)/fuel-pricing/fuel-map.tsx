@@ -51,10 +51,10 @@ interface Props {
 
 // ── Component ────────────────────────────────────────────────────────────────
 export default function FuelMap({ discountCpl }: Props) {
-  const [stations,      setStations]      = useState<FuelStation[]>([])
-  const [loading,       setLoading]       = useState(false)
-  const [apiKeyMissing, setApiKeyMissing] = useState(false)
-  const [fuelType,      setFuelType]      = useState<'diesel' | 'ulp'>('diesel')
+  const [stations,  setStations]  = useState<FuelStation[]>([])
+  const [loading,   setLoading]   = useState(false)
+  const [isMock,    setIsMock]    = useState(false)
+  const [fuelType,  setFuelType]  = useState<'diesel' | 'ulp'>('diesel')
 
   const fetchStations = useCallback(async (bounds: LatLngBounds) => {
     setLoading(true)
@@ -65,13 +65,8 @@ export default function FuelMap({ discountCpl }: Props) {
         `/api/fuel-stations?neLat=${ne.lat}&neLng=${ne.lng}&swLat=${sw.lat}&swLng=${sw.lng}&fuelType=${fuelType}`
       )
       const data = await res.json()
-      if (data.apiKeyMissing) {
-        setApiKeyMissing(true)
-        setStations([])
-      } else {
-        setApiKeyMissing(false)
-        setStations(data.stations ?? [])
-      }
+      setStations(data.stations ?? [])
+      setIsMock(data.mock === true)
     } catch {
       // network error — leave existing stations visible
     } finally {
@@ -119,9 +114,9 @@ export default function FuelMap({ discountCpl }: Props) {
             Loading stations…
           </div>
         )}
-        {apiKeyMissing && (
-          <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[1000] bg-amber-500/20 border border-amber-500/40 text-amber-300 text-xs px-4 py-2 rounded-full shadow max-w-xs text-center">
-            Petrol Spy API key not configured — live prices unavailable
+        {isMock && (
+          <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[1000] bg-blue-500/20 border border-blue-500/40 text-blue-300 text-xs px-4 py-2 rounded-full shadow max-w-xs text-center">
+            Demo data · Add NSW_FUEL_CHECK_API_KEY to Vercel for live prices
           </div>
         )}
 

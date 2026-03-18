@@ -3,16 +3,17 @@ import { NextRequest, NextResponse } from 'next/server'
 // ---------------------------------------------------------------------------
 // NSW FuelCheck API proxy
 // ---------------------------------------------------------------------------
-// Register free at https://api.nsw.gov.au → "FuelCheck Reference App"
-// Add to Vercel env vars:
-//   NSW_FUEL_CHECK_API_KEY=your_key_here
+// Register free at https://api.nsw.gov.au → subscribe to "FuelCheck" API
+// Create an app to get a Consumer Key + Consumer Secret, then add to Vercel:
+//   NSW_FUEL_CHECK_KEY=your_consumer_key
+//   NSW_FUEL_CHECK_SECRET=your_consumer_secret
 //
-// Without a key, the route falls back to mock Sydney station data so the map
-// still renders for testing/demo purposes.
+// Without keys, falls back to mock Sydney station data for testing.
 // ---------------------------------------------------------------------------
 
-const NSW_API_KEY  = process.env.NSW_FUEL_CHECK_API_KEY
-const NSW_BASE_URL = 'https://api.onegov.nsw.gov.au/FuelCheckRefApp/v1'
+const NSW_KEY    = process.env.NSW_FUEL_CHECK_KEY
+const NSW_SECRET = process.env.NSW_FUEL_CHECK_SECRET
+const NSW_BASE   = 'https://api.onegov.nsw.gov.au'
 
 const FUEL_TYPE_CODES: Record<string, string> = {
   diesel: 'DL',
@@ -82,8 +83,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Missing bounds parameters' }, { status: 400 })
   }
 
-  // ── Try NSW FuelCheck API if key is set ────────────────────────────────────
-  if (NSW_API_KEY) {
+  // ── Try NSW FuelCheck API if keys are set ─────────────────────────────────
+  if (NSW_KEY && NSW_SECRET) {
     try {
       const centreLat = (neLat + swLat) / 2
       const centreLng = (neLng + swLng) / 2
@@ -92,21 +93,28 @@ export async function GET(request: NextRequest) {
       )))
       const fuelCode  = FUEL_TYPE_CODES[fuelType] ?? 'DL'
 
-      // Step 1: Get access token via client credentials
-      const tokenRes = await fetch('https://api.onegov.nsw.gov.au/oauth/client_credential/accesstoken?grant_type=client_credentials', {
+      // Step 1: Get access token via client credentials (Consumer Key:Secret)
+      const tokenRes = await fetch(`${NSW_BASE}/oauth/client_credential/accesstoken?grant_type=client_credentials`, {
         method:  'GET',
-        headers: { Authorization: `Basic ${Buffer.from(NSW_API_KEY + ':').toString('base64')}` },
+        headers: { Authorization: `Basic ${Buffer.from(`${NSW_KEY}:${NSW_SECRET}`).toString('base64')}` },
       })
       const { access_token } = await tokenRes.json()
 
-      // Step 2: Fetch stations by location
+      // Step 2: Fetch stations nearby (POST /FuelPriceCheck/v2/fuel/prices/nearby)
       const stationsRes = await fetch(
-        `${NSW_BASE_URL}/fuel/prices/bylocation?latitude=${centreLat}&longitude=${centreLng}&radius=${radiusKm}&fueltype=${fuelCode}`,
+        `${NSW_BASE}/FuelPriceCheck/v2/fuel/prices/nearby`,
         {
+          method: 'POST',
           headers: {
             Authorization:  `Bearer ${access_token}`,
             'Content-Type': 'application/json',
           },
+          body: JSON.stringify({
+            fueltype:  fuelCode,
+            latitude:  centreLat,
+            longitude: centreLng,
+            radius:    radiusKm,
+          }),
           next: { revalidate: 300 },
         }
       )

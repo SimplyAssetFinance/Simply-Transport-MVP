@@ -54,6 +54,7 @@ export default function FuelMap({ discountCpl }: Props) {
   const [stations,  setStations]  = useState<FuelStation[]>([])
   const [loading,   setLoading]   = useState(false)
   const [isMock,    setIsMock]    = useState(false)
+  const [apiError,  setApiError]  = useState<string | null>(null)
   const [fuelType,  setFuelType]  = useState<'diesel' | 'ulp'>('diesel')
 
   const fetchStations = useCallback(async (bounds: LatLngBounds) => {
@@ -65,8 +66,14 @@ export default function FuelMap({ discountCpl }: Props) {
         `/api/fuel-stations?neLat=${ne.lat}&neLng=${ne.lng}&swLat=${sw.lat}&swLng=${sw.lng}&fuelType=${fuelType}`
       )
       const data = await res.json()
-      setStations(data.stations ?? [])
-      setIsMock(data.mock === true)
+      if (data.error) {
+        setApiError(data.error)
+        setStations([])
+      } else {
+        setApiError(null)
+        setStations(data.stations ?? [])
+        setIsMock(data.mock === true)
+      }
     } catch {
       // network error — leave existing stations visible
     } finally {
@@ -114,9 +121,9 @@ export default function FuelMap({ discountCpl }: Props) {
             Loading stations…
           </div>
         )}
-        {isMock && (
-          <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[1000] bg-blue-500/20 border border-blue-500/40 text-blue-300 text-xs px-4 py-2 rounded-full shadow max-w-xs text-center">
-            Demo data · Add NSW_FUEL_CHECK_API_KEY to Vercel for live prices
+        {apiError && (
+          <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[1000] bg-red-500/20 border border-red-500/40 text-red-300 text-xs px-4 py-2 rounded-lg shadow max-w-sm text-center">
+            API error: {apiError}
           </div>
         )}
 

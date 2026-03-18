@@ -51,8 +51,8 @@ export default function SubmitChecklistPage() {
     setResponses(r)
   }
 
-  function onChecklistChange(id: string) {
-    setChecklistId(id)
+  function onChecklistChange(id: string | null) {
+    setChecklistId(id ?? '')
     const cl = checklists.find(c => c.id === id)
     setSelectedChecklist(cl || null)
     if (cl) initResponses(cl.items)
@@ -127,7 +127,7 @@ export default function SubmitChecklistPage() {
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label className="text-slate-300">Vehicle *</Label>
-            <Select value={vehicleId} onValueChange={setVehicleId}>
+            <Select value={vehicleId} onValueChange={(v) => setVehicleId(v ?? '')}>
               <SelectTrigger className="bg-slate-800 border-slate-700 text-white">
                 <SelectValue placeholder="Select vehicle…" />
               </SelectTrigger>

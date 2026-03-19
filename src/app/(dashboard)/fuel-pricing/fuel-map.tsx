@@ -43,30 +43,64 @@ function priceColor(price: number | null, all: (number | null)[]): string {
   return '#f59e0b'                      // amber  — mid range
 }
 
+// ── Brand normalisation (sub-brands → parent) ────────────────────────────────
+const BRAND_ALIASES: Record<string, string> = {
+  // Shell
+  'shell':              'Shell',
+  'coles express':      'Shell',
+  'reddy':              'Shell',
+  'reddy express':      'Shell',
+  'otr':                'Shell',
+  'on the run':         'Shell',
+  // Ampol
+  'ampol':              'Ampol',
+  'caltex':             'Ampol',
+  'puma':               'Ampol',
+  'puma energy':        'Ampol',
+  'eg ampol':           'Ampol',
+  // BP
+  'bp':                 'BP',
+  'bp express':         'BP',
+  // 7-Eleven
+  '7-eleven':           '7-Eleven',
+  // United
+  'united':             'United',
+  'united petroleum':   'United',
+  // Woolworths
+  'woolworths':         'Woolworths',
+  'woolworths petrol':  'Woolworths',
+  // Liberty
+  'liberty':            'Liberty',
+  'liberty oil':        'Liberty',
+  // Metro
+  'metro':              'Metro',
+  'metro petroleum':    'Metro',
+}
+
+function parentBrand(raw: string): string {
+  return BRAND_ALIASES[raw.toLowerCase()] ?? raw
+}
+
 // ── Brand colour map ─────────────────────────────────────────────────────────
 const BRAND_COLORS: Record<string, string> = {
-  'bp':             '#00823e',
-  'ampol':          '#e31837',
-  'caltex':         '#e31837',
-  'coles express':  '#cc0000',
-  'shell':          '#fbce07',
-  '7-eleven':       '#e31837',
-  'united':         '#003087',
-  'reddy':          '#d62d20',
-  'woolworths':     '#00843d',
-  'liberty':        '#f47920',
-  'puma':           '#333333',
-  'metro':          '#0047ab',
-  'independent':    '#6366f1',
+  'Shell':       '#dd1d21',
+  'Ampol':       '#e31837',
+  'BP':          '#00823e',
+  '7-Eleven':    '#e31837',
+  'United':      '#003087',
+  'Woolworths':  '#00843d',
+  'Liberty':     '#f47920',
+  'Metro':       '#0047ab',
 }
 
 function brandColor(brand: string): string {
-  return BRAND_COLORS[brand.toLowerCase()] ?? '#334155'
+  return BRAND_COLORS[parentBrand(brand)] ?? '#334155'
 }
 
 // ── DivIcon factory ───────────────────────────────────────────────────────────
 function createFuelIcon(brand: string, price: number | null, color: string): L.DivIcon {
-  const initial   = brand.trim()[0]?.toUpperCase() ?? '?'
+  const resolved  = parentBrand(brand)
+  const initial   = resolved === 'BP' ? 'BP' : resolved.trim()[0]?.toUpperCase() ?? '?'
   const priceText = price !== null ? `${price}` : '—'
   const bg        = brandColor(brand)
 
@@ -211,7 +245,10 @@ export default function FuelMap({ discountCpl }: Props) {
                 <Popup>
                   <div className="min-w-[180px] font-sans">
                     <p className="font-semibold text-sm text-gray-900 leading-tight">{s.name}</p>
-                    <p className="text-xs text-gray-400 mb-3">{s.brand}</p>
+                    <p className="text-xs text-gray-500 leading-snug mb-1">{s.brand}</p>
+                    {s.address && (
+                      <p className="text-xs text-gray-400 mb-3">{s.address}</p>
+                    )}
 
                     <div className="space-y-1.5 text-sm">
                       <div className="flex items-center justify-between">

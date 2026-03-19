@@ -18,6 +18,7 @@ export interface FuelStation {
   id:      string
   name:    string
   brand:   string
+  address: string
   lat:     number
   lng:     number
   price:   number | null
@@ -83,7 +84,7 @@ export async function GET(request: NextRequest) {
     const data = await res.json()
 
     // ── Build station location index keyed by code (string) ─────────────────
-    type StationMeta = { lat: number; lng: number; name: string; brand: string }
+    type StationMeta = { lat: number; lng: number; name: string; brand: string; address: string }
     const stationIndex: Record<string, StationMeta> = {}
 
     const rawStations: any[] = Array.isArray(data.stations) ? data.stations : []
@@ -93,10 +94,11 @@ export async function GET(request: NextRequest) {
       const lng  = s.location?.longitude
       if (code && lat != null && lng != null) {
         stationIndex[String(code)] = {
-          lat:   Number(lat),
-          lng:   Number(lng),
-          name:  s.name  ?? 'Unknown',
-          brand: s.brand ?? 'Unknown',
+          lat:     Number(lat),
+          lng:     Number(lng),
+          name:    s.name    ?? 'Unknown',
+          brand:   s.brand   ?? 'Unknown',
+          address: s.address ?? '',
         }
       }
     }
@@ -118,6 +120,7 @@ export async function GET(request: NextRequest) {
           id:      code,
           name:    station.name,
           brand:   station.brand,
+          address: station.address,
           lat:     station.lat,
           lng:     station.lng,
           price,

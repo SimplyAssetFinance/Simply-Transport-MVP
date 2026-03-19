@@ -280,21 +280,46 @@ export default function FuelMap({ discountCpl }: Props) {
           })}
         </MapContainer>
 
-        {/* Legend */}
-        <div className="absolute bottom-4 right-4 z-[1000] bg-slate-900/95 border border-slate-700 rounded-lg p-3 text-xs space-y-1.5 shadow-lg">
-          <p className="text-slate-400 font-semibold uppercase tracking-wider text-[10px] mb-2">Price (relative)</p>
-          <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-green-500 shrink-0" /><span className="text-slate-300">Cheapest</span></div>
-          <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-amber-500 shrink-0" /><span className="text-slate-300">Mid range</span></div>
-          <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-red-500   shrink-0" /><span className="text-slate-300">Most expensive</span></div>
-          <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-slate-500 shrink-0" /><span className="text-slate-300">No data</span></div>
+        {/* Price colour legend — bottom right */}
+        <div className="absolute bottom-4 right-4 z-[1000] bg-slate-900/95 border border-slate-700 rounded-lg p-3 text-xs shadow-lg">
+          <p className="text-slate-400 font-semibold uppercase tracking-wider text-[10px] mb-2">Price colour (relative to area)</p>
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-green-500 shrink-0" /><span className="text-slate-300">Cheapest in area</span></div>
+            <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-amber-500 shrink-0" /><span className="text-slate-300">Mid range</span></div>
+            <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-red-500   shrink-0" /><span className="text-slate-300">Most expensive</span></div>
+            <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-slate-500 shrink-0" /><span className="text-slate-300">No data</span></div>
+          </div>
         </div>
 
-        {/* Station count */}
-        {stations.length > 0 && (
-          <div className="absolute bottom-4 left-4 z-[1000] bg-slate-900/95 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-400 shadow">
-            {stations.length} station{stations.length !== 1 ? 's' : ''} in view
+        {/* Brand legend — bottom left */}
+        <div className="absolute bottom-4 left-4 z-[1000] bg-slate-900/95 border border-slate-700 rounded-lg p-3 text-xs shadow-lg">
+          <p className="text-slate-400 font-semibold uppercase tracking-wider text-[10px] mb-2">Brand</p>
+          <div className="space-y-1.5">
+            {([
+              { label: 'S',  name: 'Shell',       bg: '#FFD100', text: '#1a1a1a' },
+              { label: 'A',  name: 'Ampol',        bg: '#e31837', text: '#fff'    },
+              { label: 'BP', name: 'BP',           bg: '#00823e', text: '#fff'    },
+              { label: '7',  name: '7-Eleven',     bg: '#e31837', text: '#fff'    },
+              { label: 'U',  name: 'United',       bg: '#003087', text: '#fff'    },
+              { label: 'W',  name: 'Woolworths',   bg: '#00843d', text: '#fff'    },
+              { label: 'L',  name: 'Liberty',      bg: '#f47920', text: '#fff'    },
+              { label: 'M',  name: 'Metro',        bg: '#0047ab', text: '#fff'    },
+              { label: '?',  name: 'Independent',  bg: '#334155', text: '#fff'    },
+            ] as const).map(({ label, name, bg, text }) => (
+              <div key={name} className="flex items-center gap-2">
+                <div style={{ background: bg, color: text }} className="w-5 h-5 rounded-full shrink-0 flex items-center justify-center font-bold text-[8px]">
+                  {label}
+                </div>
+                <span className="text-slate-300">{name}</span>
+              </div>
+            ))}
           </div>
-        )}
+          {stations.length > 0 && (
+            <p className="text-slate-500 mt-2 pt-2 border-t border-slate-700">
+              {stations.length} station{stations.length !== 1 ? 's' : ''} in view
+            </p>
+          )}
+        </div>
       </div>
     </div>
   )

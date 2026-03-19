@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet'
 import L from 'leaflet'
-import type { Map as LeafletMap, LatLngBounds } from 'leaflet'
+import type { LatLngBounds } from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import type { FuelStation } from '@/app/api/fuel-stations/route'
 
@@ -203,8 +203,8 @@ export default function FuelMap({ discountCpl }: Props) {
           className="z-0"
         >
           <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+            url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
           />
           <MapEvents onBoundsChange={fetchStations} fuelType={fuelType} />
 

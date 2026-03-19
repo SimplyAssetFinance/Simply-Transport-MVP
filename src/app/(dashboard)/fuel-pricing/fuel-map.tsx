@@ -82,19 +82,19 @@ function parentBrand(raw: string): string {
 }
 
 // ── Brand colour map ─────────────────────────────────────────────────────────
-const BRAND_COLORS: Record<string, string> = {
-  'Shell':       '#dd1d21',
-  'Ampol':       '#e31837',
-  'BP':          '#00823e',
-  '7-Eleven':    '#e31837',
-  'United':      '#003087',
-  'Woolworths':  '#00843d',
-  'Liberty':     '#f47920',
-  'Metro':       '#0047ab',
+const BRAND_COLORS: Record<string, { bg: string; text: string }> = {
+  'Shell':       { bg: '#FFD100', text: '#1a1a1a' },
+  'Ampol':       { bg: '#e31837', text: '#fff'    },
+  'BP':          { bg: '#00823e', text: '#fff'    },
+  '7-Eleven':    { bg: '#e31837', text: '#fff'    },
+  'United':      { bg: '#003087', text: '#fff'    },
+  'Woolworths':  { bg: '#00843d', text: '#fff'    },
+  'Liberty':     { bg: '#f47920', text: '#fff'    },
+  'Metro':       { bg: '#0047ab', text: '#fff'    },
 }
 
-function brandColor(brand: string): string {
-  return BRAND_COLORS[parentBrand(brand)] ?? '#334155'
+function brandStyle(brand: string): { bg: string; text: string } {
+  return BRAND_COLORS[parentBrand(brand)] ?? { bg: '#334155', text: '#fff' }
 }
 
 // ── DivIcon factory ───────────────────────────────────────────────────────────
@@ -102,7 +102,7 @@ function createFuelIcon(brand: string, price: number | null, color: string): L.D
   const resolved  = parentBrand(brand)
   const initial   = resolved === 'BP' ? 'BP' : resolved.trim()[0]?.toUpperCase() ?? '?'
   const priceText = price !== null ? `${price}` : '—'
-  const bg        = brandColor(brand)
+  const { bg, text: brandText } = brandStyle(brand)
 
   const html = `
     <div style="display:inline-block;text-align:center;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.45));">
@@ -114,7 +114,7 @@ function createFuelIcon(brand: string, price: number | null, color: string): L.D
         margin:0 auto 2px;
         display:flex;align-items:center;justify-content:center;
         font:800 9px/1 Arial,sans-serif;
-        color:#fff;
+        color:${brandText};
         letter-spacing:0;
       ">${initial}</div>
       <div style="

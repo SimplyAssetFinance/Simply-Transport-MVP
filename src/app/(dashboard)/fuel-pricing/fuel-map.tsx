@@ -66,42 +66,37 @@ function brandColor(brand: string): string {
 
 // ── DivIcon factory ───────────────────────────────────────────────────────────
 function createFuelIcon(brand: string, price: number | null, color: string): L.DivIcon {
-  const label     = brand.length > 12 ? brand.slice(0, 11) + '…' : brand
-  const priceText = price !== null ? `${price}¢` : '—'
+  const initial   = brand.trim()[0]?.toUpperCase() ?? '?'
+  const priceText = price !== null ? `${price}` : '—'
   const bg        = brandColor(brand)
 
   const html = `
-    <div style="position:relative;display:inline-block;text-align:center;">
+    <div style="display:inline-block;text-align:center;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.45));">
       <div style="
-        border-radius:8px;
-        overflow:hidden;
-        box-shadow:0 2px 8px rgba(0,0,0,0.55);
-        min-width:60px;
+        width:22px;height:22px;
+        border-radius:50%;
+        background:${bg};
+        border:2px solid #fff;
+        margin:0 auto 2px;
+        display:flex;align-items:center;justify-content:center;
+        font:800 9px/1 Arial,sans-serif;
+        color:#fff;
+        letter-spacing:0;
+      ">${initial}</div>
+      <div style="
+        background:#0f172a;
+        border:1.5px solid ${color};
+        border-radius:4px;
+        padding:1px 5px 2px;
+        font:700 11px/1.2 Arial,sans-serif;
+        color:${color};
         white-space:nowrap;
-      ">
-        <div style="
-          background:${bg};
-          padding:3px 8px 2px;
-          font:700 8px/1.4 Arial,sans-serif;
-          color:#fff;
-          letter-spacing:0.06em;
-          text-transform:uppercase;
-        ">${label}</div>
-        <div style="
-          background:#111827;
-          padding:2px 8px 4px;
-          font:800 13px/1.2 Arial,sans-serif;
-          color:${color};
-          border:2px solid ${color};
-          border-top:none;
-          border-radius:0 0 6px 6px;
-        ">${priceText}</div>
-      </div>
+      ">${priceText}¢</div>
       <div style="
         width:0;height:0;
-        border-left:6px solid transparent;
-        border-right:6px solid transparent;
-        border-top:7px solid ${color};
+        border-left:4px solid transparent;
+        border-right:4px solid transparent;
+        border-top:5px solid ${color};
         margin:0 auto;
       "></div>
     </div>
@@ -110,9 +105,9 @@ function createFuelIcon(brand: string, price: number | null, color: string): L.D
   return L.divIcon({
     html,
     className:   '',
-    iconSize:    [70, 50],
-    iconAnchor:  [35, 50],
-    popupAnchor: [0, -50],
+    iconSize:    [44, 46],
+    iconAnchor:  [22, 46],
+    popupAnchor: [0, -48],
   })
 }
 

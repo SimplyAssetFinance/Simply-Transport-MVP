@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { MapContainer, TileLayer, CircleMarker, Popup, useMapEvents } from 'react-leaflet'
+import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet'
+import L from 'leaflet'
 import type { Map as LeafletMap, LatLngBounds } from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import type { FuelStation } from '@/app/api/fuel-stations/route'
@@ -22,7 +23,6 @@ function MapEvents({
     },
   })
 
-  // Trigger initial load + re-fetch when fuel type changes
   useEffect(() => {
     fetchRef.current(map.getBounds())
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -43,6 +43,79 @@ function priceColor(price: number | null, all: (number | null)[]): string {
   return '#f59e0b'                      // amber  — mid range
 }
 
+// ── Brand colour map ─────────────────────────────────────────────────────────
+const BRAND_COLORS: Record<string, string> = {
+  'bp':             '#00823e',
+  'ampol':          '#e31837',
+  'caltex':         '#e31837',
+  'coles express':  '#cc0000',
+  'shell':          '#fbce07',
+  '7-eleven':       '#e31837',
+  'united':         '#003087',
+  'reddy':          '#d62d20',
+  'woolworths':     '#00843d',
+  'liberty':        '#f47920',
+  'puma':           '#333333',
+  'metro':          '#0047ab',
+  'independent':    '#6366f1',
+}
+
+function brandColor(brand: string): string {
+  return BRAND_COLORS[brand.toLowerCase()] ?? '#334155'
+}
+
+// ── DivIcon factory ───────────────────────────────────────────────────────────
+function createFuelIcon(brand: string, price: number | null, color: string): L.DivIcon {
+  const label     = brand.length > 12 ? brand.slice(0, 11) + '…' : brand
+  const priceText = price !== null ? `${price}¢` : '—'
+  const bg        = brandColor(brand)
+
+  const html = `
+    <div style="position:relative;display:inline-block;text-align:center;">
+      <div style="
+        border-radius:8px;
+        overflow:hidden;
+        box-shadow:0 2px 8px rgba(0,0,0,0.55);
+        min-width:60px;
+        white-space:nowrap;
+      ">
+        <div style="
+          background:${bg};
+          padding:3px 8px 2px;
+          font:700 8px/1.4 Arial,sans-serif;
+          color:#fff;
+          letter-spacing:0.06em;
+          text-transform:uppercase;
+        ">${label}</div>
+        <div style="
+          background:#111827;
+          padding:2px 8px 4px;
+          font:800 13px/1.2 Arial,sans-serif;
+          color:${color};
+          border:2px solid ${color};
+          border-top:none;
+          border-radius:0 0 6px 6px;
+        ">${priceText}</div>
+      </div>
+      <div style="
+        width:0;height:0;
+        border-left:6px solid transparent;
+        border-right:6px solid transparent;
+        border-top:7px solid ${color};
+        margin:0 auto;
+      "></div>
+    </div>
+  `
+
+  return L.divIcon({
+    html,
+    className:   '',
+    iconSize:    [70, 50],
+    iconAnchor:  [35, 50],
+    popupAnchor: [0, -50],
+  })
+}
+
 // ── Props ────────────────────────────────────────────────────────────────────
 interface Props {
   discountCpl: number | null
@@ -50,11 +123,10 @@ interface Props {
 
 // ── Component ────────────────────────────────────────────────────────────────
 export default function FuelMap({ discountCpl }: Props) {
-  const [stations,  setStations]  = useState<FuelStation[]>([])
-  const [loading,   setLoading]   = useState(false)
-  const [isMock,    setIsMock]    = useState(false)
-  const [apiError,  setApiError]  = useState<string | null>(null)
-  const [fuelType,  setFuelType]  = useState<'diesel' | 'ulp'>('diesel')
+  const [stations, setStations] = useState<FuelStation[]>([])
+  const [loading,  setLoading]  = useState(false)
+  const [apiError, setApiError] = useState<string | null>(null)
+  const [fuelType, setFuelType] = useState<'diesel' | 'ulp'>('diesel')
 
   const fetchStations = useCallback(async (bounds: LatLngBounds) => {
     setLoading(true)
@@ -71,7 +143,6 @@ export default function FuelMap({ discountCpl }: Props) {
       } else {
         setApiError(null)
         setStations(data.stations ?? [])
-        setIsMock(data.mock === true)
       }
     } catch {
       // network error — leave existing stations visible
@@ -114,7 +185,6 @@ export default function FuelMap({ discountCpl }: Props) {
 
       {/* Map container */}
       <div className="relative rounded-xl overflow-hidden border border-slate-700">
-        {/* Status overlays */}
         {loading && (
           <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[1000] bg-slate-900/90 text-white text-xs px-3 py-1.5 rounded-full shadow border border-slate-700">
             Loading stations…
@@ -127,7 +197,7 @@ export default function FuelMap({ discountCpl }: Props) {
         )}
 
         <MapContainer
-          center={[-33.8688, 151.2093]}  // Default: Sydney
+          center={[-33.8688, 151.2093]}
           zoom={13}
           style={{ height: '560px' }}
           className="z-0"
@@ -138,50 +208,44 @@ export default function FuelMap({ discountCpl }: Props) {
           />
           <MapEvents onBoundsChange={fetchStations} fuelType={fuelType} />
 
-          {stations.map((s) => (
-            <CircleMarker
-              key={s.id}
-              center={[s.lat, s.lng]}
-              radius={11}
-              pathOptions={{
-                fillColor:   priceColor(s.price, allPrices),
-                fillOpacity: 0.9,
-                color:       '#fff',
-                weight:      1.5,
-              }}
-            >
-              <Popup>
-                <div className="min-w-[180px] font-sans">
-                  <p className="font-semibold text-sm text-gray-900 leading-tight">{s.name}</p>
-                  <p className="text-xs text-gray-400 mb-3">{s.brand}</p>
+          {stations.map((s) => {
+            const color = priceColor(s.price, allPrices)
+            const icon  = createFuelIcon(s.brand, s.price, color)
+            return (
+              <Marker key={s.id} position={[s.lat, s.lng]} icon={icon}>
+                <Popup>
+                  <div className="min-w-[180px] font-sans">
+                    <p className="font-semibold text-sm text-gray-900 leading-tight">{s.name}</p>
+                    <p className="text-xs text-gray-400 mb-3">{s.brand}</p>
 
-                  <div className="space-y-1.5 text-sm">
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-600">Board price</span>
-                      <span className="font-bold text-gray-900">
-                        {s.price !== null ? `${s.price}¢/L` : '—'}
-                      </span>
-                    </div>
-
-                    {discountCpl !== null && s.price !== null && (
-                      <div className="flex items-center justify-between text-green-700 bg-green-50 -mx-1 px-1 py-0.5 rounded">
-                        <span>Your price (−{discountCpl}¢)</span>
-                        <span className="font-bold">
-                          {(s.price - discountCpl).toFixed(1)}¢/L
+                    <div className="space-y-1.5 text-sm">
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-600">Board price</span>
+                        <span className="font-bold text-gray-900">
+                          {s.price !== null ? `${s.price}¢/L` : '—'}
                         </span>
                       </div>
-                    )}
 
-                    {s.updated && (
-                      <p className="text-xs text-gray-400 pt-1 border-t border-gray-100">
-                        Updated {s.updated}
-                      </p>
-                    )}
+                      {discountCpl !== null && s.price !== null && (
+                        <div className="flex items-center justify-between text-green-700 bg-green-50 -mx-1 px-1 py-0.5 rounded">
+                          <span>Your price (−{discountCpl}¢)</span>
+                          <span className="font-bold">
+                            {(s.price - discountCpl).toFixed(1)}¢/L
+                          </span>
+                        </div>
+                      )}
+
+                      {s.updated && (
+                        <p className="text-xs text-gray-400 pt-1 border-t border-gray-100">
+                          Updated {s.updated}
+                        </p>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </Popup>
-            </CircleMarker>
-          ))}
+                </Popup>
+              </Marker>
+            )
+          })}
         </MapContainer>
 
         {/* Legend */}
@@ -189,7 +253,7 @@ export default function FuelMap({ discountCpl }: Props) {
           <p className="text-slate-400 font-semibold uppercase tracking-wider text-[10px] mb-2">Price (relative)</p>
           <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-green-500 shrink-0" /><span className="text-slate-300">Cheapest</span></div>
           <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-amber-500 shrink-0" /><span className="text-slate-300">Mid range</span></div>
-          <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-red-500 shrink-0"   /><span className="text-slate-300">Most expensive</span></div>
+          <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-red-500   shrink-0" /><span className="text-slate-300">Most expensive</span></div>
           <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-slate-500 shrink-0" /><span className="text-slate-300">No data</span></div>
         </div>
 

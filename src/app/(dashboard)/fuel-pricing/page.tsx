@@ -8,7 +8,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 import { format, parseISO, addDays } from 'date-fns'
 import { MapPin, BarChart2 } from 'lucide-react'
 import Link from 'next/link'
-import type { TGPPrice } from '@/lib/types'
+import type { TGPPrice, FuelCard } from '@/lib/types'
 
 // react-leaflet must be client-only (no SSR)
 const FuelMap = dynamic(() => import('./fuel-map'), {
@@ -37,9 +37,9 @@ const COLORS = { 'Shell Viva': '#f97316', BP: '#3b82f6', Ampol: '#22c55e' }
 type Tab = 'live' | 'tgp'
 
 export default function FuelPricingPage() {
-  const [tab,              setTab]             = useState<Tab>('live')
-  const [discountCpl,      setDiscountCpl]     = useState<number | null>(null)
-  const [prices,           setPrices]          = useState<TGPPrice[]>([])
+  const [tab,        setTab]       = useState<Tab>('live')
+  const [fuelCards,  setFuelCards] = useState<FuelCard[]>([])
+  const [prices,     setPrices]    = useState<TGPPrice[]>([])
   const [selectedTerminal, setSelectedTerminal] = useState(TERMINALS[0])
   const [period,           setPeriod]          = useState('30')
   const [loading,          setLoading]         = useState(true)
@@ -59,10 +59,10 @@ export default function FuelPricingPage() {
       if (user) {
         const { data: fuelSettings } = await sb
           .from('user_fuel_settings')
-          .select('fuel_discount_cpl')
+          .select('fuel_cards')
           .eq('user_id', user.id)
           .maybeSingle()
-        setDiscountCpl(fuelSettings?.fuel_discount_cpl ?? null)
+        setFuelCards(fuelSettings?.fuel_cards ?? [])
       }
 
       setLoading(false)
@@ -100,11 +100,19 @@ export default function FuelPricingPage() {
           <h1 className="text-2xl font-bold text-white">Fuel Pricing</h1>
           <p className="text-slate-400 mt-1">Live board prices & terminal gate prices</p>
         </div>
-        {discountCpl !== null && (
+        {fuelCards.length > 0 ? (
           <div className="text-xs text-green-400 bg-green-500/10 border border-green-500/20 px-3 py-2 rounded-lg">
-            Your discount: −{discountCpl}¢/L &nbsp;·&nbsp;{' '}
-            <Link href="/settings" className="underline hover:text-green-300">Edit in Settings</Link>
+            {fuelCards.length === 1
+              ? `${fuelCards[0].provider}: −${fuelCards[0].discountCpl}¢/L`
+              : `${fuelCards.length} fuel cards active`
+            }
+            &nbsp;·&nbsp;
+            <Link href="/settings" className="underline hover:text-green-300">Edit</Link>
           </div>
+        ) : (
+          <Link href="/settings" className="text-xs text-slate-500 hover:text-slate-400 underline">
+            Add fuel cards in Settings to see discounted prices
+          </Link>
         )}
       </div>
 
@@ -150,7 +158,7 @@ export default function FuelPricingPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <FuelMap discountCpl={discountCpl} />
+            <FuelMap fuelCards={fuelCards} />
           </CardContent>
         </Card>
       )}

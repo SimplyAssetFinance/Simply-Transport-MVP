@@ -102,3 +102,36 @@ export interface NotificationSettings {
   email_enabled: boolean
   updated_at: string
 }
+
+export type FuelCardProvider =
+  | 'Shell'
+  | '7-Eleven Fuel Pass'
+  | 'AmpolCard'
+  | 'BP Plus'
+  | 'EG Fuel'
+  | 'FleetCard'
+  | 'Metro Petroleum'
+  | 'Mobil'
+  | 'Puma'
+  | 'United'
+  | 'WEX Motorpass'
+
+export interface FuelCard {
+  provider: FuelCardProvider
+  discountCpl: number // positive value e.g. 4.5
+}
+
+// Shell first, then alphabetical
+export const FUEL_CARD_OPTIONS: FuelCardProvider[] = [
+  'Shell',
+  '7-Eleven Fuel Pass',
+  'AmpolCard',
+  'BP Plus',
+  'EG Fuel',
+  'FleetCard',
+  'Metro Petroleum',
+  'Mobil',
+  'Puma',
+  'United',
+  'WEX Motorpass',
+]

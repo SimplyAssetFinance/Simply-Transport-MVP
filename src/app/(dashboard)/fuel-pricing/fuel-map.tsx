@@ -5,6 +5,7 @@ import L from 'leaflet'
 import type { LatLngBounds } from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import type { FuelStation } from '@/app/api/fuel-stations/route'
+import type { FuelCard, FuelCardProvider } from '@/lib/types'
 
 // ── Map event handler ────────────────────────────────────────────────────────
 function MapEvents({
@@ -161,13 +162,44 @@ function createFuelIcon(brand: string, price: number | null, color: string): L.D
   })
 }
 
+// ── Card → site network matching ─────────────────────────────────────────────
+const CARD_NETWORKS: Partial<Record<FuelCardProvider, string[]>> = {
+  'Shell':              ['shell', 'coles express', 'reddy', 'viva', 'liberty'],
+  'AmpolCard':          ['ampol', 'caltex', 'eg ampol'],
+  'BP Plus':            ['bp'],
+  '7-Eleven Fuel Pass': ['7-eleven'],
+  'EG Fuel':            ['eg australia', 'eg fuel'],
+  'Metro Petroleum':    ['metro'],
+  'Mobil':              ['mobil'],
+  'Puma':               ['puma'],
+  'United':             ['united'],
+}
+
+function cardAppliesToSite(provider: FuelCardProvider, siteBrand: string): boolean {
+  if (provider === 'FleetCard' || provider === 'WEX Motorpass') return true
+  const raw = siteBrand.toLowerCase()
+  return (CARD_NETWORKS[provider] ?? []).some(n => raw.includes(n))
+}
+
+function getBestDiscount(siteBrand: string, cards: FuelCard[]): { discount: number; card: string | null } {
+  let best = 0
+  let card: string | null = null
+  for (const c of cards) {
+    if (cardAppliesToSite(c.provider, siteBrand) && c.discountCpl > best) {
+      best = c.discountCpl
+      card = c.provider
+    }
+  }
+  return { discount: best, card }
+}
+
 // ── Props ────────────────────────────────────────────────────────────────────
 interface Props {
-  discountCpl: number | null
+  fuelCards: FuelCard[]
 }
 
 // ── Component ────────────────────────────────────────────────────────────────
-export default function FuelMap({ discountCpl }: Props) {
+export default function FuelMap({ fuelCards }: Props) {
   const [stations,      setStations]      = useState<FuelStation[]>([])
   const [loading,       setLoading]       = useState(false)
   const [apiError,      setApiError]      = useState<string | null>(null)
@@ -241,14 +273,11 @@ export default function FuelMap({ discountCpl }: Props) {
             {f === 'diesel' ? 'Diesel' : 'ULP 91'}
           </button>
         ))}
-        {discountCpl !== null && (
+        {fuelCards.length > 0 && (
           <span className="ml-auto text-xs text-green-400 bg-green-500/10 border border-green-500/20 px-2.5 py-1 rounded-full">
-            Your discount: −{discountCpl}¢/L
-          </span>
-        )}
-        {discountCpl === null && (
-          <span className="ml-auto text-xs text-slate-500">
-            Set your Cpl discount in Settings to see your price
+            {fuelCards.length === 1
+              ? `${fuelCards[0].provider}: −${fuelCards[0].discountCpl}¢/L`
+              : `${fuelCards.length} fuel cards active`}
           </span>
         )}
       </div>
@@ -282,6 +311,7 @@ export default function FuelMap({ discountCpl }: Props) {
           {stations.map((s) => {
             const color = priceColor(s.price, allPrices)
             const icon  = createFuelIcon(s.brand, s.price, color)
+            const best  = getBestDiscount(s.brand, fuelCards)
             return (
               <Marker key={s.id} position={[s.lat, s.lng]} icon={icon}>
                 <Popup>
@@ -300,12 +330,17 @@ export default function FuelMap({ discountCpl }: Props) {
                         </span>
                       </div>
 
-                      {discountCpl !== null && s.price !== null && (
-                        <div className="flex items-center justify-between text-green-700 bg-green-50 -mx-1 px-1 py-0.5 rounded">
-                          <span>Your price (−{discountCpl}¢)</span>
-                          <span className="font-bold">
-                            {(s.price - discountCpl).toFixed(1)}¢/L
-                          </span>
+                      {best.discount > 0 && s.price !== null && (
+                        <div className="bg-green-50 -mx-1 px-1 py-1 rounded space-y-0.5">
+                          <div className="flex items-center justify-between text-green-700">
+                            <span>Your price (−{best.discount}¢)</span>
+                            <span className="font-bold">
+                              {(s.price - best.discount).toFixed(1)}¢/L
+                            </span>
+                          </div>
+                          {best.card && (
+                            <p className="text-[10px] text-green-600">via {best.card}</p>
+                          )}
                         </div>
                       )}
 

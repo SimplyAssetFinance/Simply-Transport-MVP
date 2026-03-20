@@ -383,39 +383,6 @@ export default function FuelMap({ discountCpl }: Props) {
         </div>
       </div>
 
-      {/* Data attribution — required by each state's data provider */}
-      <p className="text-[10px] text-slate-400 leading-relaxed">
-        {activeState === 'nsw' && (
-          <>
-            Fuel price data sourced from{' '}
-            <a
-              href="https://www.fuelcheck.nsw.gov.au/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline hover:text-slate-400"
-            >
-              NSW FuelCheck
-            </a>
-            {' '}© NSW Government (Service NSW). Data is updated in real time as reported by fuel retailers.
-            Map tiles © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer" className="underline hover:text-slate-400">OpenStreetMap</a> contributors, © <a href="https://carto.com/attributions" target="_blank" rel="noopener noreferrer" className="underline hover:text-slate-400">CARTO</a>.
-          </>
-        )}
-        {activeState === 'wa' && (
-          <>
-            Fuel price data sourced from{' '}
-            <a
-              href="https://www.fuelwatch.wa.gov.au/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline hover:text-slate-400"
-            >
-              FuelWatch
-            </a>
-            {' '}© Government of Western Australia (Dept. of Energy, Mines, Industry Regulation and Safety). Prices are set daily under WA fuel pricing legislation.
-            Map tiles © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer" className="underline hover:text-slate-400">OpenStreetMap</a> contributors, © <a href="https://carto.com/attributions" target="_blank" rel="noopener noreferrer" className="underline hover:text-slate-400">CARTO</a>.
-          </>
-        )}
-      </p>
     </div>
   )
 }

@@ -232,7 +232,11 @@ export default function FuelMap({ fuelCards }: Props) {
     }
   }, [fuelType, activeState])
 
-  const allPrices = stations.map(s => s.price)
+  // Effective price = board price minus best card discount (if applicable)
+  const allPrices = stations.map(s => {
+    const { discount } = getBestDiscount(s.brand, fuelCards)
+    return discount > 0 && s.price !== null ? s.price - discount : s.price
+  })
 
   return (
     <div className="space-y-3">
@@ -309,9 +313,12 @@ export default function FuelMap({ fuelCards }: Props) {
           <MapEvents onBoundsChange={fetchStations} fuelType={fuelType} />
 
           {stations.map((s) => {
-            const color = priceColor(s.price, allPrices)
-            const icon  = createFuelIcon(s.brand, s.price, color)
-            const best  = getBestDiscount(s.brand, fuelCards)
+            const best           = getBestDiscount(s.brand, fuelCards)
+            const effectivePrice = best.discount > 0 && s.price !== null
+              ? parseFloat((s.price - best.discount).toFixed(1))
+              : s.price
+            const color = priceColor(effectivePrice, allPrices)
+            const icon  = createFuelIcon(s.brand, effectivePrice, color)
             return (
               <Marker key={s.id} position={[s.lat, s.lng]} icon={icon}>
                 <Popup>

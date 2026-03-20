@@ -140,10 +140,10 @@ export default function FuelPricingPage() {
           <CardHeader>
             <div className="flex items-center justify-between flex-wrap gap-2">
               <CardTitle className="text-white">Live Board Prices</CardTitle>
-              <span className="text-xs text-slate-500">
-                NSW: <a href="https://www.fuelcheck.nsw.gov.au/" target="_blank" rel="noopener noreferrer" className="underline hover:text-slate-300">NSW FuelCheck</a> © NSW Govt
+              <span className="text-xs text-slate-400">
+                Data: <a href="https://www.fuelcheck.nsw.gov.au/" target="_blank" rel="noopener noreferrer" className="text-blue-400 underline hover:text-blue-300">NSW FuelCheck</a> © NSW Govt
                 &nbsp;·&nbsp;
-                WA: <a href="https://www.fuelwatch.wa.gov.au/" target="_blank" rel="noopener noreferrer" className="underline hover:text-slate-300">FuelWatch</a> © WA Govt
+                <a href="https://www.fuelwatch.wa.gov.au/" target="_blank" rel="noopener noreferrer" className="text-blue-400 underline hover:text-blue-300">FuelWatch WA</a> © WA Govt
                 &nbsp;·&nbsp;
                 Pan &amp; zoom to explore
               </span>

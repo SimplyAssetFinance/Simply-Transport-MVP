@@ -384,7 +384,7 @@ export default function FuelMap({ discountCpl }: Props) {
       </div>
 
       {/* Data attribution — required by each state's data provider */}
-      <p className="text-[10px] text-slate-600 leading-relaxed">
+      <p className="text-[10px] text-slate-400 leading-relaxed">
         {activeState === 'nsw' && (
           <>
             Fuel price data sourced from{' '}

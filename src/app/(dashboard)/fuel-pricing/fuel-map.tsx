@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet'
+import { MapContainer, TileLayer, Marker, Popup, useMapEvents, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import type { LatLngBounds } from 'leaflet'
 import 'leaflet/dist/leaflet.css'
@@ -28,6 +28,22 @@ function MapEvents({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fuelType])
 
+  return null
+}
+
+// ── State centres ────────────────────────────────────────────────────────────
+const STATE_CENTERS: Record<string, [number, number]> = {
+  nsw: [-33.8688, 151.2093],
+  wa:  [-31.9505, 115.8605],
+}
+
+// Flies to the selected state capital when activeState changes
+function MapController({ activeState }: { activeState: string }) {
+  const map = useMap()
+  useEffect(() => {
+    map.flyTo(STATE_CENTERS[activeState] ?? STATE_CENTERS.nsw, 12, { duration: 1.2 })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeState])
   return null
 }
 
@@ -156,16 +172,18 @@ export default function FuelMap({ discountCpl }: Props) {
   const [loading,       setLoading]       = useState(false)
   const [apiError,      setApiError]      = useState<string | null>(null)
   const [fuelType,      setFuelType]      = useState<'diesel' | 'ulp'>('diesel')
+  const [activeState,   setActiveState]   = useState<'nsw' | 'wa'>('nsw')
   const [showBrands,    setShowBrands]    = useState(false)
   const [showPriceKey,  setShowPriceKey]  = useState(false)
 
   const fetchStations = useCallback(async (bounds: LatLngBounds) => {
     setLoading(true)
     try {
-      const ne  = bounds.getNorthEast()
-      const sw  = bounds.getSouthWest()
+      const ne       = bounds.getNorthEast()
+      const sw       = bounds.getSouthWest()
+      const endpoint = activeState === 'wa' ? '/api/fuel-stations-wa' : '/api/fuel-stations'
       const res = await fetch(
-        `/api/fuel-stations?neLat=${ne.lat}&neLng=${ne.lng}&swLat=${sw.lat}&swLng=${sw.lng}&fuelType=${fuelType}`
+        `${endpoint}?neLat=${ne.lat}&neLng=${ne.lng}&swLat=${sw.lat}&swLng=${sw.lng}&fuelType=${fuelType}`
       )
       const data = await res.json()
       if (data.error) {
@@ -180,12 +198,33 @@ export default function FuelMap({ discountCpl }: Props) {
     } finally {
       setLoading(false)
     }
-  }, [fuelType])
+  }, [fuelType, activeState])
 
   const allPrices = stations.map(s => s.price)
 
   return (
     <div className="space-y-3">
+      {/* State selector */}
+      <div className="flex items-center gap-2">
+        <span className="text-slate-400 text-sm">State:</span>
+        {([
+          { key: 'nsw', label: 'NSW' },
+          { key: 'wa',  label: 'WA'  },
+        ] as const).map(({ key, label }) => (
+          <button
+            key={key}
+            onClick={() => { setActiveState(key); setStations([]) }}
+            className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+              activeState === key
+                ? 'bg-blue-600 text-white'
+                : 'bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
       {/* Fuel type toggle */}
       <div className="flex items-center gap-2">
         <span className="text-slate-400 text-sm">Fuel type:</span>
@@ -237,6 +276,7 @@ export default function FuelMap({ discountCpl }: Props) {
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
             url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
           />
+          <MapController activeState={activeState} />
           <MapEvents onBoundsChange={fetchStations} fuelType={fuelType} />
 
           {stations.map((s) => {
@@ -342,6 +382,40 @@ export default function FuelMap({ discountCpl }: Props) {
           )}
         </div>
       </div>
+
+      {/* Data attribution — required by each state's data provider */}
+      <p className="text-[10px] text-slate-600 leading-relaxed">
+        {activeState === 'nsw' && (
+          <>
+            Fuel price data sourced from{' '}
+            <a
+              href="https://www.fuelcheck.nsw.gov.au/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline hover:text-slate-400"
+            >
+              NSW FuelCheck
+            </a>
+            {' '}© NSW Government (Service NSW). Data is updated in real time as reported by fuel retailers.
+            Map tiles © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer" className="underline hover:text-slate-400">OpenStreetMap</a> contributors, © <a href="https://carto.com/attributions" target="_blank" rel="noopener noreferrer" className="underline hover:text-slate-400">CARTO</a>.
+          </>
+        )}
+        {activeState === 'wa' && (
+          <>
+            Fuel price data sourced from{' '}
+            <a
+              href="https://www.fuelwatch.wa.gov.au/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline hover:text-slate-400"
+            >
+              FuelWatch
+            </a>
+            {' '}© Government of Western Australia (Dept. of Energy, Mines, Industry Regulation and Safety). Prices are set daily under WA fuel pricing legislation.
+            Map tiles © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer" className="underline hover:text-slate-400">OpenStreetMap</a> contributors, © <a href="https://carto.com/attributions" target="_blank" rel="noopener noreferrer" className="underline hover:text-slate-400">CARTO</a>.
+          </>
+        )}
+      </p>
     </div>
   )
 }

@@ -6,6 +6,7 @@ import type { LatLngBounds } from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import type { FuelStation } from '@/app/api/fuel-stations/route'
 import type { FuelCard, FuelCardProvider } from '@/lib/types'
+import { isShellCard, cardDisplayDiscount } from '@/lib/types'
 
 // ── Map event handler ────────────────────────────────────────────────────────
 function MapEvents({
@@ -115,11 +116,13 @@ function brandStyle(brand: string): { bg: string; text: string } {
 }
 
 // ── DivIcon factory ───────────────────────────────────────────────────────────
-function createFuelIcon(brand: string, price: number | null, color: string): L.DivIcon {
-  const resolved  = parentBrand(brand)
-  const initial   = resolved === 'BP' ? 'BP' : resolved.trim()[0]?.toUpperCase() ?? '?'
-  const priceText = price !== null ? `${price}` : '—'
-  const { bg, text: brandText } = brandStyle(brand)
+function createFuelIcon(brand: string, price: number | null, color: string, isTruckstop = false): L.DivIcon {
+  const resolved   = parentBrand(brand)
+  const initial    = isTruckstop ? '🚛' : (resolved === 'BP' ? 'BP' : resolved.trim()[0]?.toUpperCase() ?? '?')
+  const priceText  = price !== null ? `${price}` : '—'
+  const { bg: brandBg, text: brandText } = brandStyle(brand)
+  const bg         = isTruckstop ? '#FFD100' : brandBg
+  const iconText   = isTruckstop ? '#1a1a1a' : brandText
 
   const html = `
     <div style="display:inline-block;text-align:center;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.45));">
@@ -131,7 +134,7 @@ function createFuelIcon(brand: string, price: number | null, color: string): L.D
         margin:0 auto 2px;
         display:flex;align-items:center;justify-content:center;
         font:800 9px/1 Arial,sans-serif;
-        color:${brandText};
+        color:${iconText};
         letter-spacing:0;
       ">${initial}</div>
       <div style="
@@ -164,7 +167,7 @@ function createFuelIcon(brand: string, price: number | null, color: string): L.D
 
 // ── Card → site network matching ─────────────────────────────────────────────
 const CARD_NETWORKS: Partial<Record<FuelCardProvider, string[]>> = {
-  'Shell':              ['shell', 'coles express', 'reddy', 'viva', 'liberty'],
+  'Shell':              ['shell', 'coles express', 'reddy', 'viva', 'liberty', 'otr'],
   'AmpolCard':          ['ampol', 'caltex', 'eg ampol'],
   'BP Plus':            ['bp'],
   '7-Eleven Fuel Pass': ['7-eleven'],
@@ -181,16 +184,40 @@ function cardAppliesToSite(provider: FuelCardProvider, siteBrand: string): boole
   return (CARD_NETWORKS[provider] ?? []).some(n => raw.includes(n))
 }
 
-function getBestDiscount(siteBrand: string, cards: FuelCard[]): { discount: number; card: string | null } {
+/** Heuristic: name-based truckstop detection until CSV data is imported */
+function isNationalTruckstop(siteName: string): boolean {
+  const n = siteName.toLowerCase()
+  return n.includes('truckstop') || n.includes('truck stop') || n.startsWith('ntn ')
+}
+
+function getBestDiscount(
+  siteName:  string,
+  siteBrand: string,
+  cards: FuelCard[]
+): { discount: number; card: string | null; tier?: 'truckstop' | 'national' } {
   let best = 0
   let card: string | null = null
+  let tier: 'truckstop' | 'national' | undefined = undefined
+  const truckstop = isNationalTruckstop(siteName)
+
   for (const c of cards) {
-    if (cardAppliesToSite(c.provider, siteBrand) && c.discountCpl > best) {
-      best = c.discountCpl
-      card = c.provider
+    if (!cardAppliesToSite(c.provider, siteBrand)) continue
+    if (isShellCard(c)) {
+      const cpl = truckstop ? c.truckstopDiscountCpl : c.nationalDiscountCpl
+      if (cpl > best) {
+        best = cpl
+        card = c.provider
+        tier = truckstop ? 'truckstop' : 'national'
+      }
+    } else {
+      if (c.discountCpl > best) {
+        best = c.discountCpl
+        card = c.provider
+        tier = undefined
+      }
     }
   }
-  return { discount: best, card }
+  return { discount: best, card, tier }
 }
 
 // ── Props ────────────────────────────────────────────────────────────────────
@@ -234,7 +261,7 @@ export default function FuelMap({ fuelCards }: Props) {
 
   // Effective price = board price minus best card discount (if applicable)
   const allPrices = stations.map(s => {
-    const { discount } = getBestDiscount(s.brand, fuelCards)
+    const { discount } = getBestDiscount(s.name, s.brand, fuelCards)
     return discount > 0 && s.price !== null ? s.price - discount : s.price
   })
 
@@ -280,7 +307,7 @@ export default function FuelMap({ fuelCards }: Props) {
         {fuelCards.length > 0 && (
           <span className="ml-auto text-xs text-green-400 bg-green-500/10 border border-green-500/20 px-2.5 py-1 rounded-full">
             {fuelCards.length === 1
-              ? `${fuelCards[0].provider}: −${fuelCards[0].discountCpl}¢/L`
+              ? `${fuelCards[0].provider}: −${cardDisplayDiscount(fuelCards[0])}¢/L`
               : `${fuelCards.length} fuel cards active`}
           </span>
         )}
@@ -313,12 +340,13 @@ export default function FuelMap({ fuelCards }: Props) {
           <MapEvents onBoundsChange={fetchStations} fuelType={fuelType} />
 
           {stations.map((s) => {
-            const best           = getBestDiscount(s.brand, fuelCards)
+            const best           = getBestDiscount(s.name, s.brand, fuelCards)
             const effectivePrice = best.discount > 0 && s.price !== null
               ? parseFloat((s.price - best.discount).toFixed(1))
               : s.price
-            const color = priceColor(effectivePrice, allPrices)
-            const icon  = createFuelIcon(s.brand, effectivePrice, color)
+            const color       = priceColor(effectivePrice, allPrices)
+            const isTruckstop = best.tier === 'truckstop'
+            const icon        = createFuelIcon(s.brand, effectivePrice, color, isTruckstop)
             return (
               <Marker key={s.id} position={[s.lat, s.lng]} icon={icon}>
                 <Popup>
@@ -346,7 +374,14 @@ export default function FuelMap({ fuelCards }: Props) {
                             </span>
                           </div>
                           {best.card && (
-                            <p className="text-[10px] text-green-600">via {best.card}</p>
+                            <p className="text-[10px] text-green-600">
+                              via {best.card}
+                              {best.tier === 'truckstop' && ' — Truckstop Discount'}
+                              {best.tier === 'national'  && ' — National Discount'}
+                            </p>
+                          )}
+                          {isTruckstop && (
+                            <p className="text-[10px] text-amber-600 font-medium">⭐ National Truckstop Network</p>
                           )}
                         </div>
                       )}

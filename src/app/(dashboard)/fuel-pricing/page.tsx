@@ -9,6 +9,7 @@ import { format, parseISO, addDays } from 'date-fns'
 import { MapPin, BarChart2 } from 'lucide-react'
 import Link from 'next/link'
 import type { TGPPrice, FuelCard } from '@/lib/types'
+import { cardDisplayDiscount, migrateFuelCards } from '@/lib/types'
 
 // react-leaflet must be client-only (no SSR)
 const FuelMap = dynamic(() => import('./fuel-map'), {
@@ -62,7 +63,7 @@ export default function FuelPricingPage() {
           .select('fuel_cards')
           .eq('user_id', user.id)
           .maybeSingle()
-        setFuelCards(fuelSettings?.fuel_cards ?? [])
+        setFuelCards(migrateFuelCards(fuelSettings?.fuel_cards ?? []))
       }
 
       setLoading(false)
@@ -103,7 +104,7 @@ export default function FuelPricingPage() {
         {fuelCards.length > 0 ? (
           <div className="text-xs text-green-400 bg-green-500/10 border border-green-500/20 px-3 py-2 rounded-lg">
             {fuelCards.length === 1
-              ? `${fuelCards[0].provider}: −${fuelCards[0].discountCpl}¢/L`
+              ? `${fuelCards[0].provider}: −${cardDisplayDiscount(fuelCards[0])}¢/L`
               : `${fuelCards.length} fuel cards active`
             }
             &nbsp;·&nbsp;

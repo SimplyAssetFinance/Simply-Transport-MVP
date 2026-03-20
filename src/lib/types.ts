@@ -116,9 +116,44 @@ export type FuelCardProvider =
   | 'United'
   | 'WEX Motorpass'
 
-export interface FuelCard {
-  provider: FuelCardProvider
+// Shell Card has two discount tiers
+export interface ShellCard {
+  provider: 'Shell'
+  truckstopDiscountCpl: number  // National Truckstop Network (259 sites) — higher discount
+  nationalDiscountCpl: number   // All other Shell/Viva/Liberty sites — lower discount
+}
+
+// All other cards have a single discount
+export interface StandardFuelCard {
+  provider: Exclude<FuelCardProvider, 'Shell'>
   discountCpl: number // positive value e.g. 4.5
+}
+
+export type FuelCard = ShellCard | StandardFuelCard
+
+export function isShellCard(card: FuelCard): card is ShellCard {
+  return card.provider === 'Shell'
+}
+
+/** Returns the best (highest) single discount value for display purposes */
+export function cardDisplayDiscount(card: FuelCard): number {
+  return isShellCard(card)
+    ? Math.max(card.truckstopDiscountCpl, card.nationalDiscountCpl)
+    : card.discountCpl
+}
+
+/** Migrates old single-discount Shell cards to the two-tier format */
+export function migrateFuelCards(raw: unknown[]): FuelCard[] {
+  return (raw ?? []).map((c: any) => {
+    if (c.provider === 'Shell' && typeof c.discountCpl === 'number' && !('nationalDiscountCpl' in c)) {
+      return {
+        provider:             'Shell' as const,
+        truckstopDiscountCpl: c.discountCpl,
+        nationalDiscountCpl:  c.discountCpl,
+      } satisfies ShellCard
+    }
+    return c as FuelCard
+  })
 }
 
 // Shell first, then alphabetical

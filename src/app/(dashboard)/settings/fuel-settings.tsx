@@ -5,21 +5,30 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Fuel, Plus, Pencil, Trash2, X } from 'lucide-react'
 import { toast } from 'sonner'
 import type { FuelCard, FuelCardProvider } from '@/lib/types'
-import { FUEL_CARD_OPTIONS } from '@/lib/types'
+import { FUEL_CARD_OPTIONS, isShellCard, migrateFuelCards } from '@/lib/types'
 
 type ModalState =
   | { open: false }
   | { open: true; mode: 'add' }
   | { open: true; mode: 'edit'; index: number }
 
+type FormState = {
+  provider:             FuelCardProvider
+  discountCpl:          string  // non-Shell cards
+  truckstopDiscountCpl: string  // Shell only
+  nationalDiscountCpl:  string  // Shell only
+}
+
+const BLANK_FORM: FormState = {
+  provider: 'Shell', discountCpl: '', truckstopDiscountCpl: '', nationalDiscountCpl: '',
+}
+
 export function FuelSettings() {
   const [cards,  setCards]  = useState<FuelCard[]>([])
   const [saving, setSaving] = useState(false)
   const [loaded, setLoaded] = useState(false)
   const [modal,  setModal]  = useState<ModalState>({ open: false })
-  const [form,   setForm]   = useState<{ provider: FuelCardProvider; discountCpl: string }>({
-    provider: 'Shell', discountCpl: '',
-  })
+  const [form,   setForm]   = useState<FormState>(BLANK_FORM)
 
   useEffect(() => {
     async function load() {
@@ -31,7 +40,7 @@ export function FuelSettings() {
         .select('fuel_cards')
         .eq('user_id', user.id)
         .maybeSingle()
-      setCards(data?.fuel_cards ?? [])
+      setCards(migrateFuelCards(data?.fuel_cards ?? []))
       setLoaded(true)
     }
     load()
@@ -53,22 +62,50 @@ export function FuelSettings() {
   function openAdd() {
     const taken = cards.map(c => c.provider)
     const first = FUEL_CARD_OPTIONS.find(p => !taken.includes(p)) ?? 'Shell'
-    setForm({ provider: first, discountCpl: '' })
+    setForm({ ...BLANK_FORM, provider: first })
     setModal({ open: true, mode: 'add' })
   }
 
   function openEdit(i: number) {
-    setForm({ provider: cards[i].provider, discountCpl: String(cards[i].discountCpl) })
+    const card = cards[i]
+    if (isShellCard(card)) {
+      setForm({
+        provider:             card.provider,
+        discountCpl:          '',
+        truckstopDiscountCpl: String(card.truckstopDiscountCpl),
+        nationalDiscountCpl:  String(card.nationalDiscountCpl),
+      })
+    } else {
+      setForm({
+        provider:             card.provider,
+        discountCpl:          String(card.discountCpl),
+        truckstopDiscountCpl: '',
+        nationalDiscountCpl:  '',
+      })
+    }
     setModal({ open: true, mode: 'edit', index: i })
   }
 
   function handleSaveModal() {
-    const val = parseFloat(form.discountCpl)
-    if (isNaN(val) || val <= 0 || val > 50) {
-      toast.error('Enter a valid discount between 0.1 and 50 ¢/L')
-      return
+    let card: FuelCard
+
+    if (form.provider === 'Shell') {
+      const ts  = parseFloat(form.truckstopDiscountCpl)
+      const nat = parseFloat(form.nationalDiscountCpl)
+      if (isNaN(ts) || ts <= 0 || ts > 50 || isNaN(nat) || nat <= 0 || nat > 50) {
+        toast.error('Enter valid discounts (0.1–50 ¢/L) for both Shell tiers')
+        return
+      }
+      card = { provider: 'Shell', truckstopDiscountCpl: ts, nationalDiscountCpl: nat }
+    } else {
+      const val = parseFloat(form.discountCpl)
+      if (isNaN(val) || val <= 0 || val > 50) {
+        toast.error('Enter a valid discount between 0.1 and 50 ¢/L')
+        return
+      }
+      card = { provider: form.provider, discountCpl: val } as FuelCard
     }
-    const card: FuelCard = { provider: form.provider, discountCpl: val }
+
     let next: FuelCard[]
     if (modal.open && modal.mode === 'edit') {
       next = cards.map((c, i) => i === modal.index ? card : c)
@@ -128,7 +165,14 @@ export function FuelSettings() {
                 <li key={card.provider} className="flex items-center justify-between bg-slate-800 rounded-lg px-4 py-3">
                   <div>
                     <p className="text-white text-sm font-medium">{card.provider}</p>
-                    <p className="text-green-400 text-xs mt-0.5">−{card.discountCpl} ¢/L</p>
+                    {isShellCard(card) ? (
+                      <>
+                        <p className="text-green-400 text-xs mt-0.5">Truckstop Network: −{card.truckstopDiscountCpl}¢/L</p>
+                        <p className="text-green-400 text-xs">Other Shell sites: −{card.nationalDiscountCpl}¢/L</p>
+                      </>
+                    ) : (
+                      <p className="text-green-400 text-xs mt-0.5">−{card.discountCpl}¢/L</p>
+                    )}
                   </div>
                   <div className="flex items-center gap-1">
                     <button
@@ -179,7 +223,13 @@ export function FuelSettings() {
                 <label className="text-slate-400 text-xs block mb-1.5">Card Provider</label>
                 <select
                   value={form.provider}
-                  onChange={e => setForm(f => ({ ...f, provider: e.target.value as FuelCardProvider }))}
+                  onChange={e => setForm(f => ({
+                    ...f,
+                    provider:             e.target.value as FuelCardProvider,
+                    discountCpl:          '',
+                    truckstopDiscountCpl: '',
+                    nationalDiscountCpl:  '',
+                  }))}
                   className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   {availableProviders.map(p => (
@@ -188,24 +238,56 @@ export function FuelSettings() {
                 </select>
               </div>
 
-              <div>
-                <label className="text-slate-400 text-xs block mb-1.5">Your Discount (¢/L)</label>
-                <div className="relative">
-                  <input
-                    type="number"
-                    min="0.1"
-                    max="50"
-                    step="0.1"
-                    value={form.discountCpl}
-                    onChange={e => setForm(f => ({ ...f, discountCpl: e.target.value }))}
-                    placeholder="e.g. 4.5"
-                    className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 pr-12"
-                  />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none">
-                    ¢/L
-                  </span>
+              {form.provider === 'Shell' ? (
+                <>
+                  <div>
+                    <label className="text-slate-400 text-xs block mb-1.5">
+                      Truckstop Network Discount (¢/L)
+                    </label>
+                    <p className="text-slate-600 text-[11px] mb-1.5">259 National Truckstop Network sites</p>
+                    <div className="relative">
+                      <input
+                        type="number" min="0.1" max="50" step="0.1"
+                        value={form.truckstopDiscountCpl}
+                        onChange={e => setForm(f => ({ ...f, truckstopDiscountCpl: e.target.value }))}
+                        placeholder="e.g. 6.0"
+                        className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 pr-12"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none">¢/L</span>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-slate-400 text-xs block mb-1.5">
+                      All Other Shell Sites (¢/L)
+                    </label>
+                    <p className="text-slate-600 text-[11px] mb-1.5">Shell, Viva, Liberty nationally</p>
+                    <div className="relative">
+                      <input
+                        type="number" min="0.1" max="50" step="0.1"
+                        value={form.nationalDiscountCpl}
+                        onChange={e => setForm(f => ({ ...f, nationalDiscountCpl: e.target.value }))}
+                        placeholder="e.g. 3.0"
+                        className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 pr-12"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none">¢/L</span>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div>
+                  <label className="text-slate-400 text-xs block mb-1.5">Your Discount (¢/L)</label>
+                  <div className="relative">
+                    <input
+                      type="number" min="0.1" max="50" step="0.1"
+                      value={form.discountCpl}
+                      onChange={e => setForm(f => ({ ...f, discountCpl: e.target.value }))}
+                      placeholder="e.g. 4.5"
+                      className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 pr-12"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none">¢/L</span>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
             <div className="flex gap-3 mt-6">

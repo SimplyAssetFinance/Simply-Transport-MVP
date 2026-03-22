@@ -263,9 +263,9 @@ const NTN: [number, number][] = [
 
 // Match a station to the NTN list by GPS proximity (within 300 m).
 // Uses a fast squared-distance check to avoid Math.sqrt on every comparison.
-// 500 m to account for GPS discrepancies between Shell's CSV and the NSW/WA
+// 2000 m to account for GPS discrepancies between Shell's CSV and the NSW/WA
 // government fuel-price databases (different reference points on the same site).
-const THRESHOLD_M = 500
+const THRESHOLD_M = 2000
 const THRESHOLD_SQ = THRESHOLD_M * THRESHOLD_M
 
 export function isNTNSite(lat: number, lng: number): boolean {

@@ -7,6 +7,7 @@ import 'leaflet/dist/leaflet.css'
 import type { FuelStation } from '@/app/api/fuel-stations/route'
 import type { FuelCard, FuelCardProvider } from '@/lib/types'
 import { isShellCard, cardDisplayDiscount } from '@/lib/types'
+import { isNTNSite } from '@/lib/ntn-sites'
 
 // ── Map event handler ────────────────────────────────────────────────────────
 function MapEvents({
@@ -184,21 +185,22 @@ function cardAppliesToSite(provider: FuelCardProvider, siteBrand: string): boole
   return (CARD_NETWORKS[provider] ?? []).some(n => raw.includes(n))
 }
 
-/** Heuristic: name-based truckstop detection until CSV data is imported */
-function isNationalTruckstop(siteName: string): boolean {
-  const n = siteName.toLowerCase()
-  return n.includes('truckstop') || n.includes('truck stop') || n.startsWith('ntn ')
+/** Returns true when a station's GPS coords match a Shell NTN site (within 300 m). */
+function isNationalTruckstop(lat: number, lng: number): boolean {
+  return isNTNSite(lat, lng)
 }
 
 function getBestDiscount(
   siteName:  string,
   siteBrand: string,
-  cards: FuelCard[]
+  cards: FuelCard[],
+  lat: number,
+  lng: number,
 ): { discount: number; card: string | null; tier?: 'truckstop' | 'national' } {
   let best = 0
   let card: string | null = null
   let tier: 'truckstop' | 'national' | undefined = undefined
-  const truckstop = isNationalTruckstop(siteName)
+  const truckstop = isNationalTruckstop(lat, lng)
 
   for (const c of cards) {
     if (!cardAppliesToSite(c.provider, siteBrand)) continue
@@ -261,7 +263,7 @@ export default function FuelMap({ fuelCards }: Props) {
 
   // Effective price = board price minus best card discount (if applicable)
   const allPrices = stations.map(s => {
-    const { discount } = getBestDiscount(s.name, s.brand, fuelCards)
+    const { discount } = getBestDiscount(s.name, s.brand, fuelCards, s.lat, s.lng)
     return discount > 0 && s.price !== null ? s.price - discount : s.price
   })
 
@@ -340,7 +342,7 @@ export default function FuelMap({ fuelCards }: Props) {
           <MapEvents onBoundsChange={fetchStations} fuelType={fuelType} />
 
           {stations.map((s) => {
-            const best           = getBestDiscount(s.name, s.brand, fuelCards)
+            const best           = getBestDiscount(s.name, s.brand, fuelCards, s.lat, s.lng)
             const effectivePrice = best.discount > 0 && s.price !== null
               ? parseFloat((s.price - best.discount).toFixed(1))
               : s.price

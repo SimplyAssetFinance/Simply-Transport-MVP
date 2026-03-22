@@ -308,21 +308,19 @@ export default function FuelMap({ fuelCards }: Props) {
         ))}
         {fuelCards.length > 0 && (
           <div className="ml-auto flex items-center gap-1.5 flex-wrap justify-end">
-            {fuelCards.length === 1 && isShellCard(fuelCards[0]) ? (
-              <>
-                <span className="text-xs text-green-400 bg-green-500/10 border border-green-500/20 px-2.5 py-1 rounded-full whitespace-nowrap">
-                  Shell Truckstop: −{fuelCards[0].truckstopDiscountCpl}¢/L
-                </span>
-                <span className="text-xs text-green-400 bg-green-500/10 border border-green-500/20 px-2.5 py-1 rounded-full whitespace-nowrap">
-                  Shell Other: −{fuelCards[0].nationalDiscountCpl}¢/L
-                </span>
-              </>
-            ) : (
-              <span className="text-xs text-green-400 bg-green-500/10 border border-green-500/20 px-2.5 py-1 rounded-full whitespace-nowrap">
-                {fuelCards.length === 1
-                  ? `${fuelCards[0].provider}: −${cardDisplayDiscount(fuelCards[0])}¢/L`
-                  : `${fuelCards.length} fuel cards active`}
-              </span>
+            {fuelCards.flatMap(card =>
+              isShellCard(card) ? [
+                <span key={`${card.provider}-ts`} className="text-xs text-green-400 bg-green-500/10 border border-green-500/20 px-2.5 py-1 rounded-full whitespace-nowrap">
+                  Shell Truckstop: −{card.truckstopDiscountCpl}¢/L
+                </span>,
+                <span key={`${card.provider}-nat`} className="text-xs text-green-400 bg-green-500/10 border border-green-500/20 px-2.5 py-1 rounded-full whitespace-nowrap">
+                  Shell Other: −{card.nationalDiscountCpl}¢/L
+                </span>,
+              ] : [
+                <span key={card.provider} className="text-xs text-green-400 bg-green-500/10 border border-green-500/20 px-2.5 py-1 rounded-full whitespace-nowrap">
+                  {card.provider}: −{cardDisplayDiscount(card)}¢/L
+                </span>,
+              ]
             )}
           </div>
         )}

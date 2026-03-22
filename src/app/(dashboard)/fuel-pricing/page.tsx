@@ -9,7 +9,7 @@ import { format, parseISO, addDays } from 'date-fns'
 import { MapPin, BarChart2 } from 'lucide-react'
 import Link from 'next/link'
 import type { TGPPrice, FuelCard } from '@/lib/types'
-import { cardDisplayDiscount, migrateFuelCards } from '@/lib/types'
+import { cardDisplayDiscount, migrateFuelCards, isShellCard } from '@/lib/types'
 
 // react-leaflet must be client-only (no SSR)
 const FuelMap = dynamic(() => import('./fuel-map'), {
@@ -102,13 +102,22 @@ export default function FuelPricingPage() {
           <p className="text-slate-400 mt-1">Live board prices & terminal gate prices</p>
         </div>
         {fuelCards.length > 0 ? (
-          <div className="text-xs text-green-400 bg-green-500/10 border border-green-500/20 px-3 py-2 rounded-lg">
-            {fuelCards.length === 1
-              ? `${fuelCards[0].provider}: −${cardDisplayDiscount(fuelCards[0])}¢/L`
-              : `${fuelCards.length} fuel cards active`
-            }
-            &nbsp;·&nbsp;
-            <Link href="/settings" className="underline hover:text-green-300">Edit</Link>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {fuelCards.flatMap(card =>
+              isShellCard(card) ? [
+                <span key={`${card.provider}-ts`} className="text-xs text-green-400 bg-green-500/10 border border-green-500/20 px-3 py-2 rounded-lg whitespace-nowrap">
+                  Shell Truckstop: −{card.truckstopDiscountCpl}¢/L
+                </span>,
+                <span key={`${card.provider}-nat`} className="text-xs text-green-400 bg-green-500/10 border border-green-500/20 px-3 py-2 rounded-lg whitespace-nowrap">
+                  Shell Other: −{card.nationalDiscountCpl}¢/L
+                </span>,
+              ] : [
+                <span key={card.provider} className="text-xs text-green-400 bg-green-500/10 border border-green-500/20 px-3 py-2 rounded-lg whitespace-nowrap">
+                  {card.provider}: −{cardDisplayDiscount(card)}¢/L
+                </span>,
+              ]
+            )}
+            <Link href="/settings" className="text-xs text-green-400 underline hover:text-green-300 whitespace-nowrap">Edit</Link>
           </div>
         ) : (
           <Link href="/settings" className="text-xs text-slate-500 hover:text-slate-400 underline">

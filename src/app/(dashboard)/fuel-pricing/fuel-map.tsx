@@ -7,7 +7,7 @@ import 'leaflet/dist/leaflet.css'
 import type { FuelStation } from '@/app/api/fuel-stations/route'
 import type { FuelCard, FuelCardProvider } from '@/lib/types'
 import { isShellCard, cardDisplayDiscount } from '@/lib/types'
-import { isNTNSite } from '@/lib/ntn-sites'
+import { isNTNSite, nearestNTNMetres } from '@/lib/ntn-sites'
 
 // ── Map event handler ────────────────────────────────────────────────────────
 function MapEvents({
@@ -386,6 +386,13 @@ export default function FuelMap({ fuelCards }: Props) {
                             <p className="text-[10px] text-amber-600 font-medium">⭐ National Truckstop Network</p>
                           )}
                         </div>
+                      )}
+
+                      {/* DEBUG — remove after diagnosis */}
+                      {parentBrand(s.brand) === 'Shell' && (
+                        <p className="text-[10px] text-blue-500 pt-1 border-t border-gray-100">
+                          NTN: {isNTNSite(s.lat, s.lng) ? '✅ matched' : `❌ nearest ${nearestNTNMetres(s.lat, s.lng).toLocaleString()} m`}
+                        </p>
                       )}
 
                       {s.updated && (

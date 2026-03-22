@@ -277,3 +277,16 @@ export function isNTNSite(lat: number, lng: number): boolean {
   }
   return false
 }
+
+/** DEBUG: returns distance in metres to the nearest NTN site. Remove after diagnosis. */
+export function nearestNTNMetres(lat: number, lng: number): number {
+  const cosLat = Math.cos(lat * (Math.PI / 180))
+  let minSq = Infinity
+  for (const [nLat, nLng] of NTN) {
+    const dLat = (lat - nLat) * 111_000
+    const dLng = (lng - nLng) * 111_000 * cosLat
+    const sq = dLat * dLat + dLng * dLng
+    if (sq < minSq) minSq = sq
+  }
+  return Math.round(Math.sqrt(minSq))
+}

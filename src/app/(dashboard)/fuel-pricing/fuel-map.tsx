@@ -307,11 +307,24 @@ export default function FuelMap({ fuelCards }: Props) {
           </button>
         ))}
         {fuelCards.length > 0 && (
-          <span className="ml-auto text-xs text-green-400 bg-green-500/10 border border-green-500/20 px-2.5 py-1 rounded-full">
-            {fuelCards.length === 1
-              ? `${fuelCards[0].provider}: −${cardDisplayDiscount(fuelCards[0])}¢/L`
-              : `${fuelCards.length} fuel cards active`}
-          </span>
+          <div className="ml-auto flex items-center gap-1.5 flex-wrap justify-end">
+            {fuelCards.length === 1 && isShellCard(fuelCards[0]) ? (
+              <>
+                <span className="text-xs text-green-400 bg-green-500/10 border border-green-500/20 px-2.5 py-1 rounded-full whitespace-nowrap">
+                  Shell Truckstop: −{fuelCards[0].truckstopDiscountCpl}¢/L
+                </span>
+                <span className="text-xs text-green-400 bg-green-500/10 border border-green-500/20 px-2.5 py-1 rounded-full whitespace-nowrap">
+                  Shell Other: −{fuelCards[0].nationalDiscountCpl}¢/L
+                </span>
+              </>
+            ) : (
+              <span className="text-xs text-green-400 bg-green-500/10 border border-green-500/20 px-2.5 py-1 rounded-full whitespace-nowrap">
+                {fuelCards.length === 1
+                  ? `${fuelCards[0].provider}: −${cardDisplayDiscount(fuelCards[0])}¢/L`
+                  : `${fuelCards.length} fuel cards active`}
+              </span>
+            )}
+          </div>
         )}
       </div>
 
@@ -389,7 +402,7 @@ export default function FuelMap({ fuelCards }: Props) {
                       )}
 
                       {/* DEBUG — remove after diagnosis */}
-                      {parentBrand(s.brand) === 'Shell' && (
+                      {cardAppliesToSite('Shell', s.brand) && (
                         <p className="text-[10px] text-blue-500 pt-1 border-t border-gray-100">
                           NTN: {isNTNSite(s.lat, s.lng) ? '✅ matched' : `❌ nearest ${nearestNTNMetres(s.lat, s.lng).toLocaleString()} m`}
                         </p>

@@ -2,11 +2,12 @@ import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { getComplianceItems } from '@/lib/utils/compliance'
 import { ComplianceBadge } from '@/components/compliance-badge'
-import { Truck, ShieldCheck, Wrench, DollarSign, FileWarning } from 'lucide-react'
+import { Truck, ShieldCheck, Wrench, DollarSign, FileWarning, Users } from 'lucide-react'
 import { ComplianceHoverTile } from '@/components/compliance-hover-tile'
 import Link from 'next/link'
 import { format, parseISO, addDays, differenceInDays } from 'date-fns'
-import type { Vehicle, TGPPrice } from '@/lib/types'
+import type { Vehicle, TGPPrice, Driver, DriverComplianceItem } from '@/lib/types'
+import { driverComplianceStatus } from '@/lib/types'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -28,6 +29,8 @@ export default async function DashboardPage() {
     { data: costCompleted },
     { data: costForecast },
     { data: dueDocs },
+    { data: driversRaw },
+    { data: driverItemsRaw },
   ] = await Promise.all([
     supabase.from('vehicles').select('*').eq('user_id', user!.id),
     supabase.from('tgp_prices').select('*').order('date', { ascending: false }).limit(5),
@@ -56,6 +59,8 @@ export default async function DashboardPage() {
       .not('due_date', 'is', null)
       .lte('due_date', day28)
       .order('due_date', { ascending: true }),
+    supabase.from('drivers').select('*').eq('user_id', user!.id),
+    supabase.from('driver_compliance_items').select('*').eq('user_id', user!.id),
   ])
 
   // Operating cost calculations
@@ -77,6 +82,14 @@ export default async function DashboardPage() {
   const urgentItems = items.filter(i => i.status !== 'ok').slice(0, 5)
 
   const latestPrices = tgpToday as TGPPrice[] || []
+
+  // Driver compliance summary
+  const allDrivers      = (driversRaw      as Driver[])               || []
+  const allDriverItems  = (driverItemsRaw  as DriverComplianceItem[]) || []
+  const activeDrivers   = allDrivers.filter(d => d.status === 'active')
+  const driverOverdue   = activeDrivers.filter(d => driverComplianceStatus(allDriverItems.filter(i => i.driver_id === d.id)) === 'overdue').length
+  const driverDueMonth  = activeDrivers.filter(d => driverComplianceStatus(allDriverItems.filter(i => i.driver_id === d.id)) === 'due_this_month').length
+  const driverOk        = activeDrivers.filter(d => driverComplianceStatus(allDriverItems.filter(i => i.driver_id === d.id)) === 'ok').length
 
   const name = user?.user_metadata?.name || user?.email?.split('@')[0] || 'there'
 
@@ -103,6 +116,39 @@ export default async function DashboardPage() {
         <ComplianceHoverTile variant="overdue"   items={overdue}  />
         <ComplianceHoverTile variant="due-week" items={dueWeek} extraCount={dueMonth.length} />
       </div>
+
+      {/* Driver Compliance Widget */}
+      {activeDrivers.length > 0 && (
+        <Card className="bg-slate-900 border-slate-800">
+          <CardHeader className="flex flex-row items-center justify-between pb-3">
+            <div className="flex items-center gap-2">
+              <Users size={18} className="text-blue-400" />
+              <CardTitle className="text-white">Driver Compliance</CardTitle>
+            </div>
+            <Link href="/drivers" className="text-blue-400 text-sm hover:underline">View all drivers</Link>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-4 gap-3">
+              <div className="text-center p-3 bg-slate-800 rounded-lg">
+                <p className="text-2xl font-bold text-white">{activeDrivers.length}</p>
+                <p className="text-slate-400 text-xs mt-0.5">Active Drivers</p>
+              </div>
+              <div className="text-center p-3 bg-slate-800 rounded-lg">
+                <p className="text-2xl font-bold text-green-400">{driverOk}</p>
+                <p className="text-slate-400 text-xs mt-0.5">Compliant</p>
+              </div>
+              <div className="text-center p-3 bg-slate-800 rounded-lg">
+                <p className="text-2xl font-bold text-yellow-400">{driverDueMonth}</p>
+                <p className="text-slate-400 text-xs mt-0.5">Due This Month</p>
+              </div>
+              <div className="text-center p-3 bg-slate-800 rounded-lg">
+                <p className="text-2xl font-bold text-red-400">{driverOverdue}</p>
+                <p className="text-slate-400 text-xs mt-0.5">Overdue</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Upcoming Maintenance */}
       {scheduledMaint && scheduledMaint.length > 0 && (

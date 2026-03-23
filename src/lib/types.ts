@@ -156,6 +156,95 @@ export function migrateFuelCards(raw: unknown[]): FuelCard[] {
   })
 }
 
+// ── Driver Compliance ─────────────────────────────────────────────────────────
+
+export type DriverStatus = 'ok' | 'due_this_month' | 'overdue'
+export type DriverComplianceItemStatus = 'ok' | 'due_soon' | 'overdue' | 'no_expiry'
+
+export interface Driver {
+  id: string
+  user_id: string
+  first_name: string
+  last_name: string
+  date_of_birth: string | null
+  mobile: string
+  email: string | null
+  emergency_contact_name: string | null
+  emergency_contact_phone: string | null
+  emergency_contact_relationship: string | null
+  employee_id: string | null
+  start_date: string | null
+  status: 'active' | 'inactive'
+  notes: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface DriverComplianceItem {
+  id: string
+  driver_id: string
+  user_id: string
+  item_type: string
+  license_number: string | null
+  issue_date: string | null
+  expiry_date: string | null
+  issuing_authority: string | null
+  reminder_days: number[]
+  notes: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface DriverDocument {
+  id: string
+  driver_id: string
+  user_id: string
+  compliance_item_id: string | null
+  document_type: string
+  file_name: string
+  file_path: string
+  file_size: number | null
+  mime_type: string | null
+  uploaded_at: string
+}
+
+export const COMPLIANCE_ITEM_TYPES = [
+  "Driver's License",
+  'Medical Certificate',
+  'Fatigue Management (Basic)',
+  'Fatigue Management (Advanced)',
+  'Dangerous Goods License',
+  'Forklift License',
+  'First Aid Certificate',
+  'Work Diary Training',
+  'Chain of Responsibility',
+  'Custom',
+] as const
+
+export type ComplianceItemType = typeof COMPLIANCE_ITEM_TYPES[number]
+
+export function driverComplianceStatus(items: DriverComplianceItem[]): DriverStatus {
+  const today = new Date(); today.setHours(0,0,0,0)
+  let worst: DriverStatus = 'ok'
+  for (const item of items) {
+    if (!item.expiry_date) continue
+    const due = new Date(item.expiry_date)
+    const days = Math.floor((due.getTime() - today.getTime()) / 86_400_000)
+    if (days < 0)  return 'overdue'
+    if (days <= 30 && worst !== 'overdue') worst = 'due_this_month'
+  }
+  return worst
+}
+
+export function itemComplianceStatus(expiryDate: string | null): DriverComplianceItemStatus {
+  if (!expiryDate) return 'no_expiry'
+  const today = new Date(); today.setHours(0,0,0,0)
+  const days = Math.floor((new Date(expiryDate).getTime() - today.getTime()) / 86_400_000)
+  if (days < 0)   return 'overdue'
+  if (days <= 30) return 'due_soon'
+  return 'ok'
+}
+
 // Shell first, then alphabetical
 export const FUEL_CARD_OPTIONS: FuelCardProvider[] = [
   'Shell',

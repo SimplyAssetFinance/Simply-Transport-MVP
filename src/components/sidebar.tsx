@@ -3,12 +3,13 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
-import { LayoutDashboard, Truck, ShieldCheck, Fuel, Settings, LogOut, FolderOpen, ClipboardList, BarChart3 } from 'lucide-react'
+import { LayoutDashboard, Truck, ShieldCheck, Fuel, Settings, LogOut, FolderOpen, ClipboardList, BarChart3, Users } from 'lucide-react'
 import { toast } from 'sonner'
 
 const nav = [
   { href: '/dashboard',    label: 'Dashboard',    icon: LayoutDashboard },
   { href: '/vehicles',     label: 'Vehicles',     icon: Truck },
+  { href: '/drivers',      label: 'Drivers',      icon: Users },
   { href: '/compliance',   label: 'Compliance',   icon: ShieldCheck },
   { href: '/checklists',   label: 'Checklists',   icon: ClipboardList },
   { href: '/fuel-pricing', label: 'Fuel Pricing', icon: Fuel },

@@ -11,18 +11,27 @@
   border-radius: 0.75rem !important;
   opacity: 1 !important;
 }
+
+/* Resize handle: replace default SVG background with a styled corner */
 .react-resizable-handle {
-  opacity: 0;
+  background-image: none !important;
+  width: 24px !important;
+  height: 24px !important;
+  opacity: 0.4;
   transition: opacity 0.15s;
 }
 .react-resizable-handle::after {
-  border-color: rgb(99, 102, 241) !important;
-  width: 8px !important;
-  height: 8px !important;
-  border-width: 0 2px 2px 0 !important;
+  content: '' !important;
+  position: absolute;
+  right: 5px;
+  bottom: 5px;
+  width: 10px;
+  height: 10px;
+  border-right: 2px solid rgb(99, 102, 241);
+  border-bottom: 2px solid rgb(99, 102, 241);
+  border-radius: 0 0 3px 0;
 }
-.react-grid-item:hover .react-resizable-handle,
-.react-grid-item.react-draggable-dragging .react-resizable-handle {
+.react-resizable-handle:hover {
   opacity: 1;
 }
 

@@ -146,7 +146,7 @@ export function DashboardGrid(props: DashboardGridProps) {
           return (
             <div
               key={id}
-              className={`flex flex-col overflow-hidden${editMode ? ' ring-1 ring-blue-500/30 rounded-xl' : ''}`}
+              className={`flex flex-col${editMode ? ' ring-1 ring-blue-500/30 rounded-xl' : ''}`}
             >
               {editMode && (
                 <div className="tile-drag-handle flex items-center justify-between px-2 py-1 cursor-grab active:cursor-grabbing select-none shrink-0 bg-slate-900/80 rounded-t-xl border-b border-slate-800">

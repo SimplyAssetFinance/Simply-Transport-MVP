@@ -61,7 +61,7 @@ export default async function VehiclesPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-3">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
           {list.map(v => {
             const status = worstStatus(v)
             const icon = VEHICLE_ICONS[v.vehicle_type ?? 'other'] ?? '🚗'

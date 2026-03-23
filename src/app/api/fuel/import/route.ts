@@ -76,11 +76,15 @@ export async function POST(req: NextRequest) {
   const iAddr    = col('site_address', 'address')
   const iProduct = col('product', 'fuel_type', 'type')
   const iQty     = col('quantity', 'litres', 'qty', 'volume')
-  const iPrice   = col('unit_price', 'price_cpl', 'price')
-  const iTotal   = col('total', 'amount', 'cost')
+  // pumpPrice column ($/L) — multiply × 100 to convert to ¢/L for storage
+  const iPrice   = col('pumpprice', 'unit_price', 'price_cpl', 'price')
+  // Shell Card actual charge (after discount) — preferred for total_aud
+  const iCardAmt = col('incgst')
+  // Pump price total (before discount) — fallback when no card amount
+  const iTotal   = col('docketamount', 'docket', 'total', 'amount', 'cost')
   const iGST     = col('gst')
 
-  if (iDate === -1 || iQty === -1 || iTotal === -1 || iSite === -1) {
+  if (iDate === -1 || iQty === -1 || (iCardAmt === -1 && iTotal === -1) || iSite === -1) {
     return NextResponse.json({
       error: 'Missing required columns. Expected: Transaction Date, Site Name, Quantity (L), Total ($)',
     }, { status: 400 })
@@ -113,12 +117,15 @@ export async function POST(req: NextRequest) {
     const dateStr = parseDate(row[iDate] ?? '')
     if (!dateStr) { skipped++; continue }
 
-    const qty     = parseAmount(row[iQty]   ?? '0')
-    const total   = parseAmount(row[iTotal] ?? '0')
-    const site    = iSite !== -1 ? (row[iSite] ?? '').trim() : ''
-    const product = iProduct !== -1 ? (row[iProduct] ?? '').trim() : ''
+    const qty       = parseAmount(row[iQty] ?? '0')
+    const site      = iSite !== -1 ? (row[iSite] ?? '').trim() : ''
+    const product   = iProduct !== -1 ? (row[iProduct] ?? '').trim() : ''
+    // Prefer Shell card amount (actual charge after discount); fall back to docket total
+    const cardAmt   = iCardAmt !== -1 ? parseAmount(row[iCardAmt] ?? '0') : 0
+    const pumpTotal = iTotal   !== -1 ? parseAmount(row[iTotal]   ?? '0') : 0
+    const totalAud  = cardAmt > 0 ? cardAmt : pumpTotal
 
-    if (!qty || !total || !site) { skipped++; continue }
+    if (!qty || !totalAud || !site) { skipped++; continue }
     if (!isFuelProduct(product)) { skipped++; continue }
 
     transactions.push({
@@ -132,8 +139,9 @@ export async function POST(req: NextRequest) {
       site_address:     iAddr !== -1 ? row[iAddr] || null : null,
       product:          product || 'Diesel',
       quantity_litres:  qty,
-      unit_price_cpl:   iPrice !== -1 ? parseAmount(row[iPrice] ?? '0') : 0,
-      total_aud:        total,
+      // Store pump price in ¢/L (pumpPrice column is in $/L → × 100)
+      unit_price_cpl:   iPrice !== -1 ? parseAmount(row[iPrice] ?? '0') * 100 : 0,
+      total_aud:        totalAud,
       gst_aud:          iGST !== -1 ? parseAmount(row[iGST] ?? '0') || null : null,
     })
   }

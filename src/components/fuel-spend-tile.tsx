@@ -18,12 +18,14 @@ type Period = 30 | 60 | 90
 
 interface SpendData {
   total_spend_aud:   number
+  pump_spend_aud:    number
   total_litres:      number
   avg_price_cpl:     number
   transaction_count: number
   savings_aud:       number
   discount_label:    string
-  chart_buckets:     { period: string; spend_aud: number }[]
+  has_pump_data:     boolean
+  chart_buckets:     { period: string; spend_aud: number; pump_aud: number }[]
   top_sites:         { site_name: string; total_spend: number; visit_count: number }[]
 }
 
@@ -139,51 +141,76 @@ export function FuelSpendTile() {
 
         {/* Spend chart */}
         {data.chart_buckets.length > 1 && (
-          <div className="h-36">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={data.chart_buckets} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                <XAxis
-                  dataKey="period"
-                  tick={{ fill: '#64748b', fontSize: 11 }}
-                  tickFormatter={v => {
-                    try { return format(parseISO(v), 'd MMM') } catch { return v }
-                  }}
-                  tickLine={false}
-                  axisLine={false}
-                  interval="preserveStartEnd"
-                />
-                <YAxis
-                  tick={{ fill: '#64748b', fontSize: 11 }}
-                  tickFormatter={fmtK}
-                  tickLine={false}
-                  axisLine={false}
-                  width={42}
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#1e293b',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    borderRadius: 8,
-                    fontSize: 12,
-                  }}
-                  labelStyle={{ color: '#94a3b8', marginBottom: 2 }}
-                  formatter={(v) => [fmt(Number(v ?? 0)), 'Spend']}
-                  labelFormatter={v => {
-                    try { return format(parseISO(v as string), period <= 30 ? 'd MMM yyyy' : "'w/c' d MMM yyyy") }
-                    catch { return v as string }
-                  }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="spend_aud"
-                  stroke="#22c55e"
-                  strokeWidth={2}
-                  dot={false}
-                  activeDot={{ r: 4, fill: '#22c55e' }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+          <div>
+            <div className="h-36">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={data.chart_buckets} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                  <XAxis
+                    dataKey="period"
+                    tick={{ fill: '#64748b', fontSize: 11 }}
+                    tickFormatter={v => {
+                      try { return format(parseISO(v), 'd MMM') } catch { return v }
+                    }}
+                    tickLine={false}
+                    axisLine={false}
+                    interval="preserveStartEnd"
+                  />
+                  <YAxis
+                    tick={{ fill: '#64748b', fontSize: 11 }}
+                    tickFormatter={fmtK}
+                    tickLine={false}
+                    axisLine={false}
+                    width={42}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: '#1e293b',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      borderRadius: 8,
+                      fontSize: 12,
+                    }}
+                    labelStyle={{ color: '#94a3b8', marginBottom: 2 }}
+                    formatter={(v, name) => [fmt(Number(v ?? 0)), name === 'pump_aud' ? 'Pump price' : 'Card price']}
+                    labelFormatter={v => {
+                      try { return format(parseISO(v as string), period <= 30 ? 'd MMM yyyy' : "'w/c' d MMM yyyy") }
+                      catch { return v as string }
+                    }}
+                  />
+                  {data.has_pump_data && (
+                    <Line
+                      type="monotone"
+                      dataKey="pump_aud"
+                      stroke="#475569"
+                      strokeWidth={1.5}
+                      strokeDasharray="4 3"
+                      dot={false}
+                      activeDot={{ r: 3, fill: '#475569' }}
+                    />
+                  )}
+                  <Line
+                    type="monotone"
+                    dataKey="spend_aud"
+                    stroke="#22c55e"
+                    strokeWidth={2}
+                    dot={false}
+                    activeDot={{ r: 4, fill: '#22c55e' }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+            {data.has_pump_data && (
+              <div className="flex items-center gap-4 mt-1.5">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-4 h-0.5 bg-green-500" />
+                  <span className="text-slate-500 text-[11px]">Card price</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <svg width="16" height="4"><line x1="0" y1="2" x2="16" y2="2" stroke="#475569" strokeWidth="1.5" strokeDasharray="4 3"/></svg>
+                  <span className="text-slate-500 text-[11px]">Pump price</span>
+                </div>
+              </div>
+            )}
           </div>
         )}
 

@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
   const [{ data: txData }, { data: settingsData }] = await Promise.all([
     supabase
       .from('fuel_transactions')
-      .select('transaction_date, quantity_litres, total_aud, site_name')
+      .select('transaction_date, quantity_litres, total_aud, site_name, unit_price_cpl')
       .eq('user_id', user.id)
       .gte('transaction_date', sinceStr)
       .order('transaction_date', { ascending: true }),
@@ -28,9 +28,10 @@ export async function GET(req: NextRequest) {
 
   const transactions = (txData ?? []) as {
     transaction_date: string
-    quantity_litres: number
-    total_aud: number
-    site_name: string
+    quantity_litres:  number
+    total_aud:        number
+    site_name:        string
+    unit_price_cpl:   number
   }[]
 
   // Summary metrics
@@ -38,21 +39,33 @@ export async function GET(req: NextRequest) {
   const totalLitres = transactions.reduce((s, t) => s + Number(t.quantity_litres), 0)
   const avgPriceCpl = totalLitres > 0 ? (totalSpend / totalLitres) * 100 : 0
 
-  // Savings from the first configured fuel card
+  // Site-dependent savings: derive from per-transaction pump price vs card price.
+  // unit_price_cpl is the pump price in ¢/L; total_aud is what the card was charged.
+  // pump_total = qty × unit_price_cpl / 100; savings = pump_total − card_total.
+  const hasPumpData = transactions.some(t => Number(t.unit_price_cpl) > 0)
+  const pumpSpend   = hasPumpData
+    ? transactions.reduce((s, t) => {
+        const cpl = Number(t.unit_price_cpl)
+        return s + (cpl > 0 ? Number(t.quantity_litres) * (cpl / 100) : Number(t.total_aud))
+      }, 0)
+    : 0
+
+  // Fall back to card-settings discount for older imports without pump price data
   const cards = migrateFuelCards(settingsData?.fuel_cards ?? [])
-  let discountCpl   = 0
-  let discountLabel = ''
-  if (cards.length > 0) {
+  let fallbackDiscountCpl = 0
+  if (!hasPumpData && cards.length > 0) {
     const card = cards[0]
-    if (isShellCard(card)) {
-      discountCpl   = card.truckstopDiscountCpl
-      discountLabel = `Shell Truckstop Discount (−${discountCpl}¢/L)`
-    } else {
-      discountCpl   = card.discountCpl
-      discountLabel = `${card.provider} Discount (−${discountCpl}¢/L)`
-    }
+    fallbackDiscountCpl = isShellCard(card) ? card.truckstopDiscountCpl : card.discountCpl
   }
-  const savingsAud = totalLitres * (discountCpl / 100)
+
+  const savingsAud    = hasPumpData
+    ? Math.max(0, pumpSpend - totalSpend)
+    : totalLitres * (fallbackDiscountCpl / 100)
+  const discountLabel = hasPumpData
+    ? 'vs pump price (site-weighted)'
+    : fallbackDiscountCpl > 0
+      ? `card discount (−${fallbackDiscountCpl}¢/L)`
+      : ''
 
   // Weekly chart buckets (start of ISO week = Monday)
   function weekStart(dateStr: string): string {
@@ -64,14 +77,24 @@ export async function GET(req: NextRequest) {
     return mon.toISOString().split('T')[0]
   }
 
-  const bucketMap: Record<string, number> = {}
+  const bucketMap: Record<string, { spend: number; pump: number }> = {}
   for (const t of transactions) {
-    const key = days <= 30 ? t.transaction_date : weekStart(t.transaction_date)
-    bucketMap[key] = (bucketMap[key] ?? 0) + Number(t.total_aud)
+    const key     = days <= 30 ? t.transaction_date : weekStart(t.transaction_date)
+    const cpl     = Number(t.unit_price_cpl)
+    const pumpAmt = cpl > 0 ? Number(t.quantity_litres) * (cpl / 100) : Number(t.total_aud)
+    const existing = bucketMap[key] ?? { spend: 0, pump: 0 }
+    bucketMap[key] = {
+      spend: existing.spend + Number(t.total_aud),
+      pump:  existing.pump  + pumpAmt,
+    }
   }
   const chartBuckets = Object.entries(bucketMap)
     .sort(([a], [b]) => a.localeCompare(b))
-    .map(([period, spend_aud]) => ({ period, spend_aud: Math.round(spend_aud * 100) / 100 }))
+    .map(([period, { spend, pump }]) => ({
+      period,
+      spend_aud: Math.round(spend * 100) / 100,
+      pump_aud:  Math.round(pump  * 100) / 100,
+    }))
 
   // Top 5 sites by spend
   const siteMap: Record<string, { total_spend: number; visit_count: number; total_litres: number }> = {}
@@ -96,11 +119,13 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     period_days:       days,
     total_spend_aud:   Math.round(totalSpend  * 100) / 100,
+    pump_spend_aud:    Math.round(pumpSpend   * 100) / 100,
     total_litres:      Math.round(totalLitres * 10)  / 10,
     avg_price_cpl:     Math.round(avgPriceCpl * 10)  / 10,
     transaction_count: transactions.length,
     savings_aud:       Math.round(savingsAud  * 100) / 100,
     discount_label:    discountLabel,
+    has_pump_data:     hasPumpData,
     chart_buckets:     chartBuckets,
     top_sites:         topSites,
   })

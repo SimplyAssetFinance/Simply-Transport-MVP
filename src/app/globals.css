@@ -1,6 +1,30 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+@import "react-grid-layout/css/styles.css";
+@import "react-resizable/css/styles.css";
+
+/* Dashboard grid overrides */
+.react-grid-placeholder {
+  background: rgba(59, 130, 246, 0.12) !important;
+  border: 1px dashed rgba(59, 130, 246, 0.4) !important;
+  border-radius: 0.75rem !important;
+  opacity: 1 !important;
+}
+.react-resizable-handle {
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.react-resizable-handle::after {
+  border-color: rgb(99, 102, 241) !important;
+  width: 8px !important;
+  height: 8px !important;
+  border-width: 0 2px 2px 0 !important;
+}
+.react-grid-item:hover .react-resizable-handle,
+.react-grid-item.react-draggable-dragging .react-resizable-handle {
+  opacity: 1;
+}
 
 @custom-variant dark (&:is(.dark *));
 

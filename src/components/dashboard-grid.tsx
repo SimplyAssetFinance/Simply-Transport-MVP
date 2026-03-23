@@ -1,21 +1,9 @@
 'use client'
 import { useState, useEffect } from 'react'
-import {
-  DndContext,
-  closestCenter,
-  PointerSensor,
-  KeyboardSensor,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-} from '@dnd-kit/core'
-import {
-  SortableContext,
-  sortableKeyboardCoordinates,
-  rectSortingStrategy,
-  arrayMove,
-} from '@dnd-kit/sortable'
-import { SortableTile, type TileSize } from './sortable-tile'
+import ReactGridLayout, { WidthProvider, type Layout } from 'react-grid-layout'
+import { GripVertical } from 'lucide-react'
+
+const RGL = WidthProvider(ReactGridLayout)
 
 export type TileId =
   | 'summary'
@@ -27,30 +15,6 @@ export type TileId =
   | 'operatingCosts'
   | 'complianceAlerts'
   | 'fuelPrices'
-
-const DEFAULT_ORDER: TileId[] = [
-  'summary',
-  'driverCompliance',
-  'maintenance',
-  'documentAlerts',
-  'fuelSpend',
-  'otherCharges',
-  'operatingCosts',
-  'complianceAlerts',
-  'fuelPrices',
-]
-
-const DEFAULT_SIZES: Record<TileId, TileSize> = {
-  summary:          6,
-  driverCompliance: 6,
-  maintenance:      6,
-  documentAlerts:   6,
-  fuelSpend:        6,
-  otherCharges:     6,
-  operatingCosts:   6,
-  complianceAlerts: 3,
-  fuelPrices:       3,
-}
 
 const TILE_LABELS: Record<TileId, string> = {
   summary:          'Fleet Summary',
@@ -64,8 +28,21 @@ const TILE_LABELS: Record<TileId, string> = {
   fuelPrices:       "Today's Fuel Prices",
 }
 
-const ORDER_KEY = 'dashboard-tile-order'
-const SIZES_KEY = 'dashboard-tile-sizes'
+// 12-column grid, rowHeight=30px, margin=16px
+// Rendered tile height (px) = h * 30 + (h - 1) * 16
+const DEFAULT_LAYOUT: Layout[] = [
+  { i: 'summary',          x: 0, y: 0,  w: 12, h: 4,  minW: 3, minH: 2  },
+  { i: 'fuelSpend',        x: 0, y: 4,  w: 7,  h: 14, minW: 4, minH: 6  },
+  { i: 'driverCompliance', x: 7, y: 4,  w: 5,  h: 6,  minW: 3, minH: 3  },
+  { i: 'operatingCosts',   x: 7, y: 10, w: 5,  h: 8,  minW: 3, minH: 4  },
+  { i: 'otherCharges',     x: 0, y: 18, w: 6,  h: 9,  minW: 3, minH: 4  },
+  { i: 'maintenance',      x: 6, y: 18, w: 6,  h: 9,  minW: 3, minH: 4  },
+  { i: 'documentAlerts',   x: 0, y: 27, w: 12, h: 5,  minW: 3, minH: 3  },
+  { i: 'complianceAlerts', x: 0, y: 32, w: 6,  h: 10, minW: 3, minH: 5  },
+  { i: 'fuelPrices',       x: 6, y: 32, w: 6,  h: 10, minW: 3, minH: 5  },
+]
+
+const LAYOUT_KEY = 'dashboard-layout-v2'
 
 export interface DashboardGridProps {
   summary:           React.ReactNode
@@ -80,44 +57,30 @@ export interface DashboardGridProps {
 }
 
 export function DashboardGrid(props: DashboardGridProps) {
-  // Always initialise with defaults — avoid hydration mismatch
-  // (localStorage is only read after mount in useEffect)
-  const [order,    setOrder]    = useState<TileId[]>(DEFAULT_ORDER)
-  const [sizes,    setSizes]    = useState<Record<TileId, TileSize>>(DEFAULT_SIZES)
+  const [layout,   setLayout]   = useState<Layout[]>(DEFAULT_LAYOUT)
   const [editMode, setEditMode] = useState(false)
+  const [mounted,  setMounted]  = useState(false)
 
   useEffect(() => {
+    setMounted(true)
     try {
-      const raw = localStorage.getItem(ORDER_KEY)
+      const raw = localStorage.getItem(LAYOUT_KEY)
       if (raw) {
-        const saved = JSON.parse(raw) as string[]
-        setOrder([
-          ...saved.filter((id): id is TileId => DEFAULT_ORDER.includes(id as TileId)),
-          ...DEFAULT_ORDER.filter(id => !saved.includes(id)),
+        const saved = JSON.parse(raw) as Layout[]
+        const ids   = new Set(saved.map(l => l.i))
+        setLayout([
+          ...saved,
+          ...DEFAULT_LAYOUT.filter(l => !ids.has(l.i)),
         ])
-      }
-    } catch { /* ignore */ }
-
-    try {
-      const raw = localStorage.getItem(SIZES_KEY)
-      if (raw) {
-        const saved = JSON.parse(raw) as Record<string, unknown>
-        const valid: Partial<Record<TileId, TileSize>> = {}
-        for (const [k, v] of Object.entries(saved)) {
-          if (DEFAULT_ORDER.includes(k as TileId) && [1,2,3,4,5,6].includes(v as number)) {
-            valid[k as TileId] = v as TileSize
-          }
-        }
-        setSizes(prev => ({ ...prev, ...valid }))
       }
     } catch { /* ignore */ }
   }, [])
 
-  const tileContent: Record<TileId, React.ReactNode> = {
+  const tileContent: Record<TileId, React.ReactNode | undefined> = {
     summary:          props.summary,
-    driverCompliance: props.driverCompliance ?? null,
-    maintenance:      props.maintenance      ?? null,
-    documentAlerts:   props.documentAlerts   ?? null,
+    driverCompliance: props.driverCompliance,
+    maintenance:      props.maintenance,
+    documentAlerts:   props.documentAlerts,
     fuelSpend:        props.fuelSpend,
     otherCharges:     props.otherCharges,
     operatingCosts:   props.operatingCosts,
@@ -125,38 +88,20 @@ export function DashboardGrid(props: DashboardGridProps) {
     fuelPrices:       props.fuelPrices,
   }
 
-  // Only sortable items that have real content
-  const visible = order.filter(id => Boolean(tileContent[id]))
+  const visibleLayout = layout.filter(l => Boolean(tileContent[l.i as TileId]))
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
-  )
-
-  function handleDragEnd({ active, over }: DragEndEvent) {
-    if (!over || active.id === over.id) return
-    setOrder(prev => {
-      const next = arrayMove(prev, prev.indexOf(active.id as TileId), prev.indexOf(over.id as TileId))
-      try { localStorage.setItem(ORDER_KEY, JSON.stringify(next)) } catch { /* ignore */ }
-      return next
-    })
-  }
-
-  function handleResize(id: TileId, newSize: TileSize) {
-    setSizes(prev => {
-      const next = { ...prev, [id]: newSize }
-      try { localStorage.setItem(SIZES_KEY, JSON.stringify(next)) } catch { /* ignore */ }
-      return next
-    })
+  function handleLayoutChange(newLayout: Layout[]) {
+    setLayout(newLayout)
+    try { localStorage.setItem(LAYOUT_KEY, JSON.stringify(newLayout)) } catch { /* ignore */ }
   }
 
   function resetLayout() {
-    setOrder(DEFAULT_ORDER)
-    setSizes(DEFAULT_SIZES)
-    try {
-      localStorage.removeItem(ORDER_KEY)
-      localStorage.removeItem(SIZES_KEY)
-    } catch { /* ignore */ }
+    setLayout(DEFAULT_LAYOUT)
+    try { localStorage.removeItem(LAYOUT_KEY) } catch { /* ignore */ }
+  }
+
+  if (!mounted) {
+    return <div className="min-h-[600px] animate-pulse rounded-xl bg-slate-900/40" />
   }
 
   return (
@@ -183,29 +128,42 @@ export function DashboardGrid(props: DashboardGridProps) {
         </button>
       </div>
 
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragEnd={handleDragEnd}
+      <RGL
+        layout={visibleLayout}
+        cols={12}
+        rowHeight={30}
+        isDraggable={editMode}
+        isResizable={editMode}
+        draggableHandle=".tile-drag-handle"
+        onLayoutChange={handleLayoutChange}
+        margin={[16, 16]}
+        containerPadding={[0, 0]}
+        compactType="vertical"
+        resizeHandles={['se']}
       >
-        <SortableContext items={visible} strategy={rectSortingStrategy}>
-          {/* 6-column grid: tiles span 1–6 columns */}
-          <div className="grid grid-cols-6 gap-6">
-            {visible.map(id => (
-              <SortableTile
-                key={id}
-                id={id}
-                label={TILE_LABELS[id]}
-                size={sizes[id] ?? 6}
-                editMode={editMode}
-                onResize={(s) => handleResize(id, s)}
-              >
+        {visibleLayout.map(({ i }) => {
+          const id = i as TileId
+          return (
+            <div
+              key={id}
+              className={`flex flex-col overflow-hidden${editMode ? ' ring-1 ring-blue-500/30 rounded-xl' : ''}`}
+            >
+              {editMode && (
+                <div className="tile-drag-handle flex items-center justify-between px-2 py-1 cursor-grab active:cursor-grabbing select-none shrink-0 bg-slate-900/80 rounded-t-xl border-b border-slate-800">
+                  <span className="text-slate-400 text-[11px] font-medium">{TILE_LABELS[id]}</span>
+                  <div className="flex items-center gap-1 text-slate-600 text-[10px]">
+                    <GripVertical size={11} />
+                    <span>drag · resize ↘</span>
+                  </div>
+                </div>
+              )}
+              <div className="flex-1 min-h-0 overflow-y-auto">
                 {tileContent[id]}
-              </SortableTile>
-            ))}
-          </div>
-        </SortableContext>
-      </DndContext>
+              </div>
+            </div>
+          )
+        })}
+      </RGL>
     </div>
   )
 }

@@ -231,7 +231,7 @@ export function driverComplianceStatus(items: DriverComplianceItem[]): DriverSta
     const due = new Date(item.expiry_date)
     const days = Math.floor((due.getTime() - today.getTime()) / 86_400_000)
     if (days < 0)  return 'overdue'
-    if (days <= 30 && worst !== 'overdue') worst = 'due_this_month'
+    if (days <= 30) worst = 'due_this_month'
   }
   return worst
 }

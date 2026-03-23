@@ -168,7 +168,7 @@ export function FuelSpendTile() {
                     fontSize: 12,
                   }}
                   labelStyle={{ color: '#94a3b8', marginBottom: 2 }}
-                  formatter={(v: number) => [fmt(v), 'Spend']}
+                  formatter={(v) => [fmt(Number(v ?? 0)), 'Spend']}
                   labelFormatter={v => {
                     try { return format(parseISO(v as string), period <= 30 ? 'd MMM yyyy' : "'w/c' d MMM yyyy") }
                     catch { return v as string }

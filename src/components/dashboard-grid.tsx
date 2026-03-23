@@ -141,7 +141,7 @@ export function DashboardGrid(props: DashboardGridProps) {
         margin={[16, 16]}
         containerPadding={[0, 0]}
         compactType="vertical"
-        resizeHandles={['se']}
+        resizeHandles={['s', 'e', 'se']}
       >
         {visibleLayout.map(({ i }) => {
           const id = i as TileId

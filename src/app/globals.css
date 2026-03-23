@@ -4,7 +4,7 @@
 @import "react-grid-layout/css/styles.css";
 @import "react-resizable/css/styles.css";
 
-/* Dashboard grid overrides */
+/* ── Dashboard grid: drag placeholder ── */
 .react-grid-placeholder {
   background: rgba(59, 130, 246, 0.12) !important;
   border: 1px dashed rgba(59, 130, 246, 0.4) !important;
@@ -12,27 +12,69 @@
   opacity: 1 !important;
 }
 
-/* Resize handle: replace default SVG background with a styled corner */
+/* ── Resize handles: strip the default SVG ── */
 .react-resizable-handle {
   background-image: none !important;
-  width: 24px !important;
-  height: 24px !important;
-  opacity: 0.4;
+  position: absolute !important;
+  opacity: 0.5;
   transition: opacity 0.15s;
-}
-.react-resizable-handle::after {
-  content: '' !important;
-  position: absolute;
-  right: 5px;
-  bottom: 5px;
-  width: 10px;
-  height: 10px;
-  border-right: 2px solid rgb(99, 102, 241);
-  border-bottom: 2px solid rgb(99, 102, 241);
-  border-radius: 0 0 3px 0;
 }
 .react-resizable-handle:hover {
   opacity: 1;
+}
+.react-resizable-handle::after {
+  content: '';
+  position: absolute;
+  background: rgb(99, 102, 241);
+  border-radius: 3px;
+}
+
+/* Bottom edge — drag up/down to change HEIGHT */
+.react-resizable-handle-s {
+  bottom: 0 !important;
+  left: 15% !important;
+  width: 70% !important;
+  height: 12px !important;
+  cursor: s-resize !important;
+}
+.react-resizable-handle-s::after {
+  left: 5%;
+  right: 5%;
+  top: 4px;
+  height: 4px;
+}
+
+/* Right edge — drag left/right to change WIDTH */
+.react-resizable-handle-e {
+  right: 0 !important;
+  top: 15% !important;
+  height: 70% !important;
+  width: 12px !important;
+  cursor: e-resize !important;
+}
+.react-resizable-handle-e::after {
+  top: 5%;
+  bottom: 5%;
+  left: 4px;
+  width: 4px;
+}
+
+/* Bottom-right corner — drag diagonally */
+.react-resizable-handle-se {
+  bottom: 0 !important;
+  right: 0 !important;
+  width: 22px !important;
+  height: 22px !important;
+  cursor: se-resize !important;
+}
+.react-resizable-handle-se::after {
+  background: transparent;
+  right: 5px;
+  bottom: 5px;
+  width: 11px;
+  height: 11px;
+  border-right: 3px solid rgb(99, 102, 241);
+  border-bottom: 3px solid rgb(99, 102, 241);
 }
 
 @custom-variant dark (&:is(.dark *));

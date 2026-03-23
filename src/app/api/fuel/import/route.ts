@@ -24,12 +24,20 @@ function parseCSV(text: string): string[][] {
   })
 }
 
-// Parse DD/MM/YYYY or YYYY-MM-DD → YYYY-MM-DD
+// Parse DD/MM/YYYY, YYYY-MM-DD, or ISO 8601 with timezone → YYYY-MM-DD
 function parseDate(raw: string): string | null {
   const ddmm = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
   if (ddmm) return `${ddmm[3]}-${ddmm[2].padStart(2, '0')}-${ddmm[1].padStart(2, '0')}`
-  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw
+  // ISO 8601 with or without time/timezone — take date portion only
+  const iso = raw.match(/^(\d{4}-\d{2}-\d{2})/)
+  if (iso) return iso[1]
   return null
+}
+
+const FUEL_PRODUCTS = /diesel|petrol|unleaded|e10|lpg|adblue|vpower|v-power/i
+
+function isFuelProduct(product: string): boolean {
+  return FUEL_PRODUCTS.test(product)
 }
 
 function parseAmount(raw: string): number {
@@ -64,7 +72,7 @@ export async function POST(req: NextRequest) {
   const iCard    = col('card_number', 'card_no', 'card')
   const iDriver  = col('driver_name', 'driver')
   const iRego    = col('vehicle_rego', 'rego', 'vehicle')
-  const iSite    = col('site_name', 'site', 'station')
+  const iSite    = col('site_name', 'site', 'outlet', 'station')
   const iAddr    = col('site_address', 'address')
   const iProduct = col('product', 'fuel_type', 'type')
   const iQty     = col('quantity', 'litres', 'qty', 'volume')
@@ -105,11 +113,13 @@ export async function POST(req: NextRequest) {
     const dateStr = parseDate(row[iDate] ?? '')
     if (!dateStr) { skipped++; continue }
 
-    const qty   = parseAmount(row[iQty]   ?? '0')
-    const total = parseAmount(row[iTotal] ?? '0')
-    const site  = iSite !== -1 ? (row[iSite] ?? '').trim() : ''
+    const qty     = parseAmount(row[iQty]   ?? '0')
+    const total   = parseAmount(row[iTotal] ?? '0')
+    const site    = iSite !== -1 ? (row[iSite] ?? '').trim() : ''
+    const product = iProduct !== -1 ? (row[iProduct] ?? '').trim() : ''
 
     if (!qty || !total || !site) { skipped++; continue }
+    if (!isFuelProduct(product)) { skipped++; continue }
 
     transactions.push({
       user_id:          user.id,
@@ -120,7 +130,7 @@ export async function POST(req: NextRequest) {
       vehicle_rego:     iRego !== -1 ? row[iRego] || null : null,
       site_name:        site,
       site_address:     iAddr !== -1 ? row[iAddr] || null : null,
-      product:          iProduct !== -1 ? row[iProduct] || 'Diesel' : 'Diesel',
+      product:          product || 'Diesel',
       quantity_litres:  qty,
       unit_price_cpl:   iPrice !== -1 ? parseAmount(row[iPrice] ?? '0') : 0,
       total_aud:        total,

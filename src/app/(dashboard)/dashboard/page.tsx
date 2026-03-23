@@ -101,8 +101,8 @@ export default async function DashboardPage() {
       if (!item.expiry_date) continue
       const s = itemComplianceStatus(item.expiry_date)
       const name = `${driver.first_name} ${driver.last_name}`
-      if (s === 'overdue')  overdueDriverItems.push({ driverName: name, itemType: item.item_type, expiryDate: item.expiry_date })
-      if (s === 'due_soon') dueMonthDriverItems.push({ driverName: name, itemType: item.item_type, expiryDate: item.expiry_date })
+      if (s === 'overdue')  overdueDriverItems.push({ driverId: driver.id, driverName: name, itemType: item.item_type, expiryDate: item.expiry_date })
+      if (s === 'due_soon') dueMonthDriverItems.push({ driverId: driver.id, driverName: name, itemType: item.item_type, expiryDate: item.expiry_date })
     }
   }
 

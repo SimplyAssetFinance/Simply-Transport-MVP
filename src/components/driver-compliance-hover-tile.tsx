@@ -5,6 +5,7 @@ import { AlertTriangle, Clock, Users, ShieldCheck } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 
 export interface DriverHoverItem {
+  driverId:   string
   driverName: string
   itemType:   string
   expiryDate: string
@@ -71,8 +72,9 @@ export function DriverComplianceHoverTile({ variant, items = [], count }: Props)
         {cfg.popupLabel}
       </p>
       {items.map((item, i) => (
-        <div
+        <a
           key={i}
+          href={`/drivers/${item.driverId}`}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -80,7 +82,14 @@ export function DriverComplianceHoverTile({ variant, items = [], count }: Props)
             paddingTop: 6,
             paddingBottom: 6,
             borderBottom: i < items.length - 1 ? '1px solid rgba(255,255,255,0.07)' : 'none',
+            textDecoration: 'none',
+            cursor: 'pointer',
+            borderRadius: 6,
+            margin: '0 -4px',
+            padding: '6px 4px',
           }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(255,255,255,0.05)' }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent' }}
         >
           <div>
             <p style={{ color: '#fff', fontSize: 13, fontWeight: 500, margin: 0 }}>{item.driverName}</p>
@@ -89,7 +98,7 @@ export function DriverComplianceHoverTile({ variant, items = [], count }: Props)
           <span style={{ color: cfg.popupColor, fontSize: 12, fontWeight: 500, marginLeft: 12, flexShrink: 0 }}>
             {format(parseISO(item.expiryDate), 'd MMM yyyy')}
           </span>
-        </div>
+        </a>
       ))}
     </div>,
     document.body

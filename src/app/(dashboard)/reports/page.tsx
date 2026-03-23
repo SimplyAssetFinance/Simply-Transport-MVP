@@ -5,6 +5,7 @@ import { BarChart3, ShieldCheck, AlertTriangle, Clock, CheckCircle2 } from 'luci
 import { getComplianceItems } from '@/lib/utils/compliance'
 import { format, parseISO } from 'date-fns'
 import { ReportsClient } from './reports-client'
+import { LocalTime } from '@/components/local-time'
 import type { Vehicle, AuditLog } from '@/lib/types'
 
 export default async function ReportsPage() {
@@ -22,6 +23,7 @@ export default async function ReportsPage() {
 
   const allVehicles = (vehicles as Vehicle[]) || []
   const allAuditLogs = (auditLogs as AuditLog[]) || []
+  const displayName = user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email || 'Unknown'
   const items = getComplianceItems(allVehicles)
 
   const overdue   = items.filter(i => i.status === 'overdue')
@@ -160,10 +162,9 @@ export default async function ReportsPage() {
                             .join(' · ')}
                         </p>
                       )}
+                      <p className="text-slate-600 text-xs mt-0.5">{displayName}</p>
                     </div>
-                    <p className="text-slate-500 text-xs shrink-0">
-                      {format(parseISO(log.created_at), 'd MMM, h:mm a')}
-                    </p>
+                    <LocalTime iso={log.created_at} className="text-slate-500 text-xs shrink-0 whitespace-nowrap" />
                   </div>
                 ))}
               </div>

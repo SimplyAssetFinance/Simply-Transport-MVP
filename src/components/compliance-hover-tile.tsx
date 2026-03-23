@@ -78,8 +78,9 @@ export function ComplianceHoverTile({ variant, items, extraCount }: Props) {
         {isOverdue ? 'Overdue Items' : 'Due This Week'}
       </p>
       {items.map((item, i) => (
-        <div
+        <a
           key={i}
+          href={`/vehicles/${item.vehicleId}`}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -87,7 +88,14 @@ export function ComplianceHoverTile({ variant, items, extraCount }: Props) {
             paddingTop: 6,
             paddingBottom: 6,
             borderBottom: i < items.length - 1 ? '1px solid rgba(255,255,255,0.07)' : 'none',
+            textDecoration: 'none',
+            cursor: 'pointer',
+            borderRadius: 6,
+            margin: '0 -4px',
+            padding: '6px 4px',
           }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(255,255,255,0.05)' }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent' }}
         >
           <div>
             <p style={{ color: '#fff', fontSize: 13, fontWeight: 500, margin: 0 }}>{item.vehicleName}</p>
@@ -96,7 +104,7 @@ export function ComplianceHoverTile({ variant, items, extraCount }: Props) {
           <span style={{ color: isOverdue ? '#f87171' : '#fbbf24', fontSize: 12, fontWeight: 500, marginLeft: 12, flexShrink: 0 }}>
             {format(parseISO(item.dueDate), 'd MMM yyyy')}
           </span>
-        </div>
+        </a>
       ))}
     </div>,
     document.body

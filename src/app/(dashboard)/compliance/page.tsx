@@ -98,24 +98,26 @@ export default async function CompliancePage() {
               </CardHeader>
               <CardContent className="space-y-2">
                 {sItems.map((item, i) => (
-                  <div key={i} className="flex items-center justify-between p-3 bg-slate-800 rounded-lg">
-                    <div className="flex items-center gap-4">
-                      <div>
-                        <p className="text-white font-medium text-sm">{item.vehicleName}</p>
-                        <p className="text-slate-400 text-xs">{item.plate}</p>
+                  <Link key={i} href={`/vehicles/${item.vehicleId}`}>
+                    <div className="flex items-center justify-between p-3 bg-slate-800 rounded-lg hover:bg-slate-700 transition-colors cursor-pointer">
+                      <div className="flex items-center gap-4">
+                        <div>
+                          <p className="text-white font-medium text-sm">{item.vehicleName}</p>
+                          <p className="text-slate-400 text-xs">{item.plate}</p>
+                        </div>
+                        <div>
+                          <p className="text-slate-300 text-sm">{TYPE_LABELS[item.type]}</p>
+                          <p className="text-slate-500 text-xs">{format(parseISO(item.dueDate), 'd MMM yyyy')}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-slate-300 text-sm">{TYPE_LABELS[item.type]}</p>
-                        <p className="text-slate-500 text-xs">{format(parseISO(item.dueDate), 'd MMM yyyy')}</p>
+                      <div className="flex items-center gap-3">
+                        <span className="text-slate-400 text-xs">
+                          {item.daysUntil < 0 ? `${Math.abs(item.daysUntil)}d overdue` : item.daysUntil === 0 ? 'Today' : `${item.daysUntil}d`}
+                        </span>
+                        <ComplianceBadge status={item.status} />
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-slate-400 text-xs">
-                        {item.daysUntil < 0 ? `${Math.abs(item.daysUntil)}d overdue` : item.daysUntil === 0 ? 'Today' : `${item.daysUntil}d`}
-                      </span>
-                      <ComplianceBadge status={item.status} />
-                    </div>
-                  </div>
+                  </Link>
                 ))}
               </CardContent>
             </Card>

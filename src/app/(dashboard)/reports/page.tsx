@@ -57,7 +57,7 @@ export default async function ReportsPage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="max-w-7xl space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">Reports</h1>
@@ -66,105 +66,112 @@ export default async function ReportsPage() {
         <ReportsClient complianceItems={items} auditLogs={allAuditLogs} />
       </div>
 
-      {/* Compliance Summary */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-slate-900 rounded-xl ring-1 ring-red-500/30 p-4">
-          <div className="flex items-center justify-between pb-2">
-            <p className="text-slate-400 text-sm">Overdue</p>
-            <AlertTriangle size={16} className="text-red-400" />
-          </div>
-          <p className="text-3xl font-bold text-red-400">{overdue.length}</p>
-        </div>
-        <div className="bg-slate-900 rounded-xl ring-1 ring-amber-500/30 p-4">
-          <div className="flex items-center justify-between pb-2">
-            <p className="text-slate-400 text-sm">Due This Week</p>
-            <Clock size={16} className="text-amber-400" />
-          </div>
-          <p className="text-3xl font-bold text-amber-400">{dueWeek.length}</p>
-        </div>
-        <div className="bg-slate-900 rounded-xl ring-1 ring-yellow-500/30 p-4">
-          <div className="flex items-center justify-between pb-2">
-            <p className="text-slate-400 text-sm">Due This Month</p>
-            <Clock size={16} className="text-yellow-400" />
-          </div>
-          <p className="text-3xl font-bold text-yellow-400">{dueMonth.length}</p>
-        </div>
-        <div className="bg-slate-900 rounded-xl ring-1 ring-green-500/30 p-4">
-          <div className="flex items-center justify-between pb-2">
-            <p className="text-slate-400 text-sm">All Clear</p>
-            <CheckCircle2 size={16} className="text-green-400" />
-          </div>
-          <p className="text-3xl font-bold text-green-400">{allClear.length}</p>
-        </div>
-      </div>
+      <div className="grid grid-cols-[3fr_2fr] gap-6 items-start">
 
-      {/* Full Compliance Report */}
-      <Card className="bg-slate-900 border-slate-800">
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <ShieldCheck size={18} className="text-blue-400" />
-            <CardTitle className="text-white">Compliance Report — All Vehicles</CardTitle>
+        {/* Left — compliance summary + report */}
+        <div className="space-y-6">
+          {/* Summary tiles */}
+          <div className="grid grid-cols-4 gap-4">
+            <div className="bg-slate-900 rounded-xl ring-1 ring-red-500/30 p-4">
+              <div className="flex items-center justify-between pb-2">
+                <p className="text-slate-400 text-sm">Overdue</p>
+                <AlertTriangle size={16} className="text-red-400" />
+              </div>
+              <p className="text-3xl font-bold text-red-400">{overdue.length}</p>
+            </div>
+            <div className="bg-slate-900 rounded-xl ring-1 ring-amber-500/30 p-4">
+              <div className="flex items-center justify-between pb-2">
+                <p className="text-slate-400 text-sm">Due This Week</p>
+                <Clock size={16} className="text-amber-400" />
+              </div>
+              <p className="text-3xl font-bold text-amber-400">{dueWeek.length}</p>
+            </div>
+            <div className="bg-slate-900 rounded-xl ring-1 ring-yellow-500/30 p-4">
+              <div className="flex items-center justify-between pb-2">
+                <p className="text-slate-400 text-sm">Due This Month</p>
+                <Clock size={16} className="text-yellow-400" />
+              </div>
+              <p className="text-3xl font-bold text-yellow-400">{dueMonth.length}</p>
+            </div>
+            <div className="bg-slate-900 rounded-xl ring-1 ring-green-500/30 p-4">
+              <div className="flex items-center justify-between pb-2">
+                <p className="text-slate-400 text-sm">All Clear</p>
+                <CheckCircle2 size={16} className="text-green-400" />
+              </div>
+              <p className="text-3xl font-bold text-green-400">{allClear.length}</p>
+            </div>
           </div>
-        </CardHeader>
-        <CardContent>
-          {items.length === 0 ? (
-            <p className="text-slate-500 text-sm text-center py-6">No vehicles found. Add vehicles to see compliance data.</p>
-          ) : (
-            <div className="space-y-2">
-              {[...overdue, ...dueWeek, ...dueMonth, ...allClear].map((item, i) => (
-                <div key={i} className="flex items-center justify-between p-3 bg-slate-800 rounded-lg">
-                  <div>
-                    <p className="text-white text-sm font-medium">{item.vehicleName}</p>
-                    <p className="text-slate-400 text-xs capitalize">
-                      {item.plate} · {item.type}
+
+          {/* Full Compliance Report */}
+          <Card className="bg-slate-900 border-slate-800">
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <ShieldCheck size={18} className="text-blue-400" />
+                <CardTitle className="text-white">Compliance Report — All Vehicles</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {items.length === 0 ? (
+                <p className="text-slate-500 text-sm text-center py-6">No vehicles found. Add vehicles to see compliance data.</p>
+              ) : (
+                <div className="space-y-2">
+                  {[...overdue, ...dueWeek, ...dueMonth, ...allClear].map((item, i) => (
+                    <div key={i} className="flex items-center justify-between p-3 bg-slate-800 rounded-lg">
+                      <div>
+                        <p className="text-white text-sm font-medium">{item.vehicleName}</p>
+                        <p className="text-slate-400 text-xs capitalize">
+                          {item.plate} · {item.type}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <p className="text-slate-400 text-xs">{format(parseISO(item.dueDate), 'd MMM yyyy')}</p>
+                        <Badge className={statusColor(item.status)}>{statusLabel(item.status)}</Badge>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Right — Activity Log */}
+        <Card className="bg-slate-900 border-slate-800">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <BarChart3 size={18} className="text-blue-400" />
+              <CardTitle className="text-white">Activity Log</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {allAuditLogs.length === 0 ? (
+              <p className="text-slate-500 text-sm text-center py-6">No activity recorded yet.</p>
+            ) : (
+              <div className="space-y-2">
+                {allAuditLogs.map(log => (
+                  <div key={log.id} className="flex items-start justify-between p-3 bg-slate-800 rounded-lg gap-3">
+                    <div className="min-w-0">
+                      <p className="text-white text-sm font-medium">{actionLabel(log.action)}</p>
+                      {log.details && Object.keys(log.details).length > 0 && (
+                        <p className="text-slate-500 text-xs mt-0.5 truncate">
+                          {Object.entries(log.details)
+                            .filter(([k]) => !k.includes('id'))
+                            .map(([k, v]) => `${k.replace(/_/g, ' ')}: ${v}`)
+                            .join(' · ')}
+                        </p>
+                      )}
+                    </div>
+                    <p className="text-slate-500 text-xs shrink-0">
+                      {format(parseISO(log.created_at), 'd MMM, h:mm a')}
                     </p>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <p className="text-slate-400 text-xs">{format(parseISO(item.dueDate), 'd MMM yyyy')}</p>
-                    <Badge className={statusColor(item.status)}>{statusLabel(item.status)}</Badge>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
-      {/* Audit Log */}
-      <Card className="bg-slate-900 border-slate-800">
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <BarChart3 size={18} className="text-blue-400" />
-            <CardTitle className="text-white">Activity Log</CardTitle>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {allAuditLogs.length === 0 ? (
-            <p className="text-slate-500 text-sm text-center py-6">No activity recorded yet.</p>
-          ) : (
-            <div className="space-y-2">
-              {allAuditLogs.map(log => (
-                <div key={log.id} className="flex items-center justify-between p-3 bg-slate-800 rounded-lg">
-                  <div>
-                    <p className="text-white text-sm font-medium">{actionLabel(log.action)}</p>
-                    {log.details && Object.keys(log.details).length > 0 && (
-                      <p className="text-slate-500 text-xs mt-0.5">
-                        {Object.entries(log.details)
-                          .filter(([k]) => !k.includes('id'))
-                          .map(([k, v]) => `${k.replace(/_/g, ' ')}: ${v}`)
-                          .join(' · ')}
-                      </p>
-                    )}
-                  </div>
-                  <p className="text-slate-500 text-xs shrink-0 ml-4">
-                    {format(parseISO(log.created_at), 'd MMM yyyy, h:mm a')}
-                  </p>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      </div>
     </div>
   )
 }

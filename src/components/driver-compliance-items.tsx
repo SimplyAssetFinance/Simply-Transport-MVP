@@ -12,8 +12,9 @@ import type { DriverComplianceItem } from '@/lib/types'
 import { COMPLIANCE_ITEM_TYPES, itemComplianceStatus } from '@/lib/types'
 
 interface Props {
-  driverId: string
-  userId:   string
+  driverId:   string
+  userId:     string
+  driverName: string
 }
 
 function StatusPill({ expiry }: { expiry: string | null }) {
@@ -29,7 +30,7 @@ const BLANK = {
   expiry_date: '', issuing_authority: '', notes: '',
 }
 
-export function DriverComplianceItems({ driverId, userId }: Props) {
+export function DriverComplianceItems({ driverId, userId, driverName }: Props) {
   const [items,   setItems]   = useState<DriverComplianceItem[]>([])
   const [loading, setLoading] = useState(true)
   const [adding,  setAdding]  = useState(false)
@@ -91,6 +92,19 @@ export function DriverComplianceItems({ driverId, userId }: Props) {
 
     let error
     if (editId) {
+      // Log history if expiry date changed
+      const oldItem = items.find(i => i.id === editId)
+      if (oldItem && oldItem.expiry_date && oldItem.expiry_date !== (form.expiry_date || null)) {
+        await sb.from('compliance_history').insert({
+          user_id:         userId,
+          entity_type:     'driver',
+          entity_id:       driverId,
+          entity_name:     driverName,
+          compliance_type: form.item_type,
+          old_expiry:      oldItem.expiry_date,
+          new_expiry:      form.expiry_date || null,
+        })
+      }
       ;({ error } = await sb.from('driver_compliance_items').update(payload).eq('id', editId))
     } else {
       ;({ error } = await sb.from('driver_compliance_items').insert(payload))

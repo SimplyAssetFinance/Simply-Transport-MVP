@@ -152,6 +152,251 @@ All metrics and chart update based on selection.
 
 ---
 
+## Operating Costs Chart (Combined View)
+
+### Overview
+
+A comprehensive chart showing all operating costs with the ability to toggle between **Combined** and **Individual** views.
+
+**Position:** Dashboard — dedicated "Operating Costs" tile (expandable)
+
+### View Toggle
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│  Operating Costs                                                    │
+│  ─────────────────────────────────────────────────────────────────  │
+│                                                                     │
+│  View: [Combined ▼] [Individual ▼]      Period: [MTD] [QTD] [YTD]  │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### Combined View (Stacked Area Chart)
+
+Shows all cost categories stacked on one chart — total at a glance.
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│  Operating Costs — Combined                   [MTD] [QTD] [YTD]    │
+│  ─────────────────────────────────────────────────────────────────  │
+│                                                                     │
+│  Total: $24,650.30                                                  │
+│                                                                     │
+│  ┌─────────────────────────────────────────────────────────────┐   │
+│  │    $25k ┤░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  │   │
+│  │         │▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  │   │
+│  │    $20k ┤▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  │   │
+│  │         │████████████████████████████████████████████████  │   │
+│  │    $15k ┤████████████████████████████████████████████████  │   │
+│  │         │████████████████████████████████████████████████  │   │
+│  │    $10k ┤████████████████████████████████████████████████  │   │
+│  │         │████████████████████████████████████████████████  │   │
+│  │     $5k ┤████████████████████████████████████████████████  │   │
+│  │         │                                                   │   │
+│  │      $0 ┼────────────────────────────────────────────────  │   │
+│  │           Jan    Feb    Mar    Apr    May    Jun            │   │
+│  └─────────────────────────────────────────────────────────────┘   │
+│                                                                     │
+│  Legend:                                                           │
+│  ████ Fuel ($14,832)  ▓▓▓▓ Maintenance ($6,450)  ░░░░ Compliance ($3,368)
+│                                                                     │
+│  [View Breakdown →]                                                │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### Individual View (Separate Line Charts)
+
+Shows each category as its own line — easier to spot trends per category.
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│  Operating Costs — Individual                 [MTD] [QTD] [YTD]    │
+│  ─────────────────────────────────────────────────────────────────  │
+│                                                                     │
+│  ☑ Fuel  ☑ Maintenance  ☑ Compliance  ☐ Tolls  ☐ Insurance        │
+│                                                                     │
+│  ┌─────────────────────────────────────────────────────────────┐   │
+│  │                                                               │   │
+│  │    $8k ┤                      ╭──── Fuel                     │   │
+│  │        │              ╭───────╯                              │   │
+│  │    $6k ┤       ╭──────╯                                      │   │
+│  │        │  ╭────╯                                             │   │
+│  │    $4k ┤──╯           ╭─────── Maintenance                   │   │
+│  │        │      ╭───────╯                                      │   │
+│  │    $2k ┤──────╯                                              │   │
+│  │        │  ════════════════════ Compliance                    │   │
+│  │     $0 ┼────────────────────────────────────────────────    │   │
+│  │          Jan    Feb    Mar    Apr    May    Jun              │   │
+│  │                                                               │   │
+│  └─────────────────────────────────────────────────────────────┘   │
+│                                                                     │
+│  Fuel: $14,832.50     Maintenance: $6,450.00     Compliance: $3,368.00
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### Category Checkboxes (Individual View)
+
+Users can toggle which categories are visible on the chart:
+
+| Category | Description | Data Source |
+|----------|-------------|-------------|
+| **Fuel** | Diesel purchases | `fuel_transactions` table |
+| **Maintenance** | Services, repairs, parts | `compliance_history` where type = 'service' |
+| **Compliance** | Rego, insurance, roadworthy | `compliance_history` where type IN ('rego', 'insurance', 'roadworthy') |
+| **Tolls** | Road tolls (future) | `toll_transactions` (Phase 2) |
+| **Insurance** | Premiums (if tracked separately) | `compliance_history` where type = 'insurance' |
+
+### Time Period Selector
+
+```
+[MTD] [QTD] [YTD]
+```
+
+| Period | Description | Chart Granularity |
+|--------|-------------|-------------------|
+| **MTD** | Month to date (1st of current month → today) | Daily buckets |
+| **QTD** | Quarter to date (1st of current quarter → today) | Weekly buckets |
+| **YTD** | Year to date (1 Jan → today) | Monthly buckets |
+
+### Category Breakdown (Pie/Donut Chart)
+
+Accessible via "View Breakdown" button — shows % split.
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│  Cost Breakdown — QTD                                       [X]    │
+│  ─────────────────────────────────────────────────────────────────  │
+│                                                                     │
+│                    ┌─────────────┐                                 │
+│                 ╱──┤             │                                 │
+│               ╱    │   60.2%     │  Fuel                           │
+│              │     │   $14,832   │                                 │
+│               ╲    │             │                                 │
+│                 ╲──┤─────────────│                                 │
+│                    │   26.2%     │  Maintenance                    │
+│                    │   $6,450    │                                 │
+│                    ├─────────────┤                                 │
+│                    │   13.6%     │  Compliance                     │
+│                    │   $3,368    │                                 │
+│                    └─────────────┘                                 │
+│                                                                     │
+│  Total: $24,650.00                                                 │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### Year-on-Year Comparison (Optional Enhancement)
+
+In Individual view, toggle to show same period last year as dashed line:
+
+```
+☑ Compare to last year
+
+    $8k ┤                      ╭──── This year
+        │              ╭───────╯
+    $6k ┤       ╭──────╯
+        │  ╭────╯        - - - - - - Last year
+    $4k ┤──╯      - - - -
+        │    - - -
+    $2k ┤- - -
+```
+
+---
+
+## Database Additions for Operating Costs
+
+### Cost Tracking
+
+Maintenance and compliance costs come from `compliance_history` when a cost is logged:
+
+```sql
+-- Add cost column to compliance_history (if not already present)
+ALTER TABLE compliance_history ADD COLUMN cost_aud DECIMAL(10, 2);
+
+-- Example: Service completed with $450 cost
+INSERT INTO compliance_history (vehicle_id, item_type, item_name, completed_date, cost_aud, ...)
+VALUES ('uuid', 'service', 'Major Service', '2026-03-23', 450.00, ...);
+```
+
+### API Endpoint for Combined Costs
+
+```
+GET /api/costs/summary?period=qtd
+
+Response:
+{
+  "period": "QTD",
+  "period_start": "2026-01-01",
+  "period_end": "2026-03-23",
+  "total_aud": 24650.30,
+  "categories": {
+    "fuel": 14832.50,
+    "maintenance": 6450.00,
+    "compliance": 3368.00
+  }
+}
+```
+
+### API Endpoint for Chart Data
+
+```
+GET /api/costs/chart?period=qtd&view=combined
+
+Response (Combined):
+{
+  "buckets": [
+    {
+      "period": "2026-01",
+      "fuel": 4521.30,
+      "maintenance": 2100.00,
+      "compliance": 890.00,
+      "total": 7511.30
+    },
+    {
+      "period": "2026-02",
+      "fuel": 5120.80,
+      "maintenance": 1850.00,
+      "compliance": 1200.00,
+      "total": 8170.80
+    },
+    ...
+  ]
+}
+```
+
+```
+GET /api/costs/chart?period=qtd&view=individual&categories=fuel,maintenance
+
+Response (Individual):
+{
+  "buckets": [
+    {"period": "2026-01", "fuel": 4521.30, "maintenance": 2100.00},
+    {"period": "2026-02", "fuel": 5120.80, "maintenance": 1850.00},
+    ...
+  ]
+}
+```
+
+### API Endpoint for Breakdown
+
+```
+GET /api/costs/breakdown?period=qtd
+
+Response:
+{
+  "total_aud": 24650.30,
+  "breakdown": [
+    {"category": "fuel", "amount_aud": 14832.50, "percentage": 60.2},
+    {"category": "maintenance", "amount_aud": 6450.00, "percentage": 26.2},
+    {"category": "compliance", "amount_aud": 3368.00, "percentage": 13.6}
+  ]
+}
+```
+
+---
+
 ## Savings Calculation
 
 ### Inputs

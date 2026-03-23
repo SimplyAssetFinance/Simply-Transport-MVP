@@ -215,7 +215,7 @@ export default function DriverProfilePage() {
             <Card className="bg-slate-900 border-slate-800">
               <CardHeader><CardTitle className="text-white text-base">Compliance Items</CardTitle></CardHeader>
               <CardContent>
-                <DriverComplianceItems driverId={params.id as string} userId={userId} />
+                <DriverComplianceItems driverId={params.id as string} userId={userId} driverName={`${driver.first_name} ${driver.last_name}`} />
               </CardContent>
             </Card>
           )}

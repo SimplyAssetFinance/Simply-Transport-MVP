@@ -4,10 +4,12 @@ import { getComplianceItems } from '@/lib/utils/compliance'
 import { ComplianceBadge } from '@/components/compliance-badge'
 import { Truck, ShieldCheck, Wrench, DollarSign, FileWarning, Users } from 'lucide-react'
 import { ComplianceHoverTile } from '@/components/compliance-hover-tile'
+import { DriverComplianceHoverTile } from '@/components/driver-compliance-hover-tile'
+import type { DriverHoverItem } from '@/components/driver-compliance-hover-tile'
 import Link from 'next/link'
 import { format, parseISO, addDays, differenceInDays } from 'date-fns'
 import type { Vehicle, TGPPrice, Driver, DriverComplianceItem } from '@/lib/types'
-import { driverComplianceStatus } from '@/lib/types'
+import { driverComplianceStatus, itemComplianceStatus } from '@/lib/types'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -91,6 +93,19 @@ export default async function DashboardPage() {
   const driverDueMonth  = activeDrivers.filter(d => driverComplianceStatus(allDriverItems.filter(i => i.driver_id === d.id)) === 'due_this_month').length
   const driverOk        = activeDrivers.filter(d => driverComplianceStatus(allDriverItems.filter(i => i.driver_id === d.id)) === 'ok').length
 
+  // Driver compliance hover data
+  const overdueDriverItems:  DriverHoverItem[] = []
+  const dueMonthDriverItems: DriverHoverItem[] = []
+  for (const driver of activeDrivers) {
+    for (const item of allDriverItems.filter(i => i.driver_id === driver.id)) {
+      if (!item.expiry_date) continue
+      const s = itemComplianceStatus(item.expiry_date)
+      const name = `${driver.first_name} ${driver.last_name}`
+      if (s === 'overdue')  overdueDriverItems.push({ driverName: name, itemType: item.item_type, expiryDate: item.expiry_date })
+      if (s === 'due_soon') dueMonthDriverItems.push({ driverName: name, itemType: item.item_type, expiryDate: item.expiry_date })
+    }
+  }
+
   const name = user?.user_metadata?.name || user?.email?.split('@')[0] || 'there'
 
   return (
@@ -119,35 +134,21 @@ export default async function DashboardPage() {
 
       {/* Driver Compliance Widget */}
       {activeDrivers.length > 0 && (
-        <Card className="bg-slate-900 border-slate-800">
-          <CardHeader className="flex flex-row items-center justify-between pb-3">
+        <div>
+          <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <Users size={18} className="text-blue-400" />
-              <CardTitle className="text-white">Driver Compliance</CardTitle>
+              <span className="text-white font-semibold">Driver Compliance</span>
             </div>
             <Link href="/drivers" className="text-blue-400 text-sm hover:underline">View all drivers</Link>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-4 gap-3">
-              <div className="text-center p-3 bg-slate-800 rounded-lg">
-                <p className="text-2xl font-bold text-white">{activeDrivers.length}</p>
-                <p className="text-slate-400 text-xs mt-0.5">Active Drivers</p>
-              </div>
-              <div className="text-center p-3 bg-slate-800 rounded-lg">
-                <p className="text-2xl font-bold text-green-400">{driverOk}</p>
-                <p className="text-slate-400 text-xs mt-0.5">Compliant</p>
-              </div>
-              <div className="text-center p-3 bg-slate-800 rounded-lg">
-                <p className="text-2xl font-bold text-yellow-400">{driverDueMonth}</p>
-                <p className="text-slate-400 text-xs mt-0.5">Due This Month</p>
-              </div>
-              <div className="text-center p-3 bg-slate-800 rounded-lg">
-                <p className="text-2xl font-bold text-red-400">{driverOverdue}</p>
-                <p className="text-slate-400 text-xs mt-0.5">Overdue</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+          </div>
+          <div className="grid grid-cols-4 gap-4">
+            <DriverComplianceHoverTile variant="active"         count={activeDrivers.length} />
+            <DriverComplianceHoverTile variant="ok"             count={driverOk} />
+            <DriverComplianceHoverTile variant="due_this_month" count={driverDueMonth} items={dueMonthDriverItems} />
+            <DriverComplianceHoverTile variant="overdue"        count={driverOverdue}  items={overdueDriverItems} />
+          </div>
+        </div>
       )}
 
       {/* Upcoming Maintenance */}

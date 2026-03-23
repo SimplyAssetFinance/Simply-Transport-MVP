@@ -73,6 +73,30 @@ export default function VehicleDetailPage() {
     e.preventDefault()
     setLoading(true)
     const sb = createClient()
+
+    // Log changed compliance dates to history before saving
+    if (vehicle && userId) {
+      const complianceFields = [
+        { label: 'Registration', oldVal: vehicle.rego_expiry,      newVal: form.rego_expiry || null },
+        { label: 'Insurance',    oldVal: vehicle.insurance_expiry, newVal: form.insurance_expiry || null },
+        { label: 'Service',      oldVal: vehicle.next_service_date, newVal: form.next_service_date || null },
+      ]
+      const historyRows = complianceFields
+        .filter(f => f.oldVal && f.oldVal !== f.newVal)
+        .map(f => ({
+          user_id:         userId,
+          entity_type:     'vehicle' as const,
+          entity_id:       params.id as string,
+          entity_name:     vehicle.nickname || vehicle.registration_plate,
+          compliance_type: f.label,
+          old_expiry:      f.oldVal,
+          new_expiry:      f.newVal,
+        }))
+      if (historyRows.length > 0) {
+        await sb.from('compliance_history').insert(historyRows)
+      }
+    }
+
     const { error } = await sb.from('vehicles').update({
       nickname: form.nickname,
       registration_plate: form.registration_plate.toUpperCase(),
@@ -96,6 +120,8 @@ export default function VehicleDetailPage() {
     } else {
       await logAudit(sb, 'vehicle_updated', 'vehicle', params.id as string, { nickname: form.nickname })
       toast.success('Vehicle updated!')
+      // Sync local vehicle state so future saves diff correctly
+      setVehicle(v => v ? { ...v, rego_expiry: form.rego_expiry || null, insurance_expiry: form.insurance_expiry || null, next_service_date: form.next_service_date || null } : v)
     }
     setLoading(false)
   }

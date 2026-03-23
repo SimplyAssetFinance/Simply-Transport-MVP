@@ -156,6 +156,21 @@ export function migrateFuelCards(raw: unknown[]): FuelCard[] {
   })
 }
 
+// ── Compliance History ────────────────────────────────────────────────────────
+
+export interface ComplianceHistoryRecord {
+  id:              string
+  user_id:         string
+  entity_type:     'vehicle' | 'driver'
+  entity_id:       string
+  entity_name:     string
+  compliance_type: string
+  old_expiry:      string | null
+  new_expiry:      string | null
+  notes:           string | null
+  completed_at:    string
+}
+
 // ── Driver Compliance ─────────────────────────────────────────────────────────
 
 export type DriverStatus = 'ok' | 'due_this_month' | 'overdue'

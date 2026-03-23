@@ -402,7 +402,7 @@ export default function FuelMap({ fuelCards }: Props) {
                       {/* DEBUG — remove after diagnosis */}
                       {cardAppliesToSite('Shell', s.brand) && (
                         <p className="text-[10px] text-blue-500 pt-1 border-t border-gray-100">
-                          NTN: {isNTNSite(s.lat, s.lng) ? '✅ matched' : `❌ nearest ${nearestNTNMetres(s.lat, s.lng).toLocaleString()} m`}
+                          NTN: {isNTNSite(s.lat, s.lng) ? '✅ matched' : `❌ nearest ${(nearestNTNMetres(s.lat, s.lng) / 1000).toFixed(1)}km`}
                         </p>
                       )}
 

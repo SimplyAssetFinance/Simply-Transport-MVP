@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
   const [{ data: txData }, { data: settingsData }] = await Promise.all([
     supabase
       .from('fuel_transactions')
-      .select('transaction_date, quantity_litres, total_aud, site_name, unit_price_cpl')
+      .select('transaction_date, quantity_litres, total_aud, site_name, unit_price_cpl, pump_total_aud')
       .eq('user_id', user.id)
       .gte('transaction_date', sinceStr)
       .order('transaction_date', { ascending: true }),
@@ -32,6 +32,7 @@ export async function GET(req: NextRequest) {
     total_aud:        number
     site_name:        string
     unit_price_cpl:   number
+    pump_total_aud:   number | null
   }[]
 
   // Summary metrics
@@ -39,16 +40,18 @@ export async function GET(req: NextRequest) {
   const totalLitres = transactions.reduce((s, t) => s + Number(t.quantity_litres), 0)
   const avgPriceCpl = totalLitres > 0 ? (totalSpend / totalLitres) * 100 : 0
 
-  // Site-dependent savings: derive from per-transaction pump price vs card price.
-  // unit_price_cpl is the pump price in ¢/L; total_aud is what the card was charged.
-  // pump_total = qty × unit_price_cpl / 100; savings = pump_total − card_total.
-  const hasPumpData = transactions.some(t => Number(t.unit_price_cpl) > 0)
-  const pumpSpend   = hasPumpData
-    ? transactions.reduce((s, t) => {
-        const cpl = Number(t.unit_price_cpl)
-        return s + (cpl > 0 ? Number(t.quantity_litres) * (cpl / 100) : Number(t.total_aud))
-      }, 0)
-    : 0
+  // Site-dependent savings: Column L (pump_total_aud = docketAmount = board price incl GST)
+  // vs Column S (total_aud = shellCardAmountIncGST = actual card charge).
+  // Prefer pump_total_aud (exact); fall back to unit_price_cpl × qty for older imports.
+  function pumpAmt(t: typeof transactions[0]): number {
+    if (Number(t.pump_total_aud) > 0) return Number(t.pump_total_aud)
+    const cpl = Number(t.unit_price_cpl)
+    if (cpl > 0) return Number(t.quantity_litres) * (cpl / 100)
+    return Number(t.total_aud)
+  }
+
+  const hasPumpData = transactions.some(t => Number(t.pump_total_aud) > 0 || Number(t.unit_price_cpl) > 0)
+  const pumpSpend   = hasPumpData ? transactions.reduce((s, t) => s + pumpAmt(t), 0) : 0
 
   // Fall back to card-settings discount for older imports without pump price data
   const cards = migrateFuelCards(settingsData?.fuel_cards ?? [])
@@ -79,13 +82,11 @@ export async function GET(req: NextRequest) {
 
   const bucketMap: Record<string, { spend: number; pump: number }> = {}
   for (const t of transactions) {
-    const key     = days <= 30 ? t.transaction_date : weekStart(t.transaction_date)
-    const cpl     = Number(t.unit_price_cpl)
-    const pumpAmt = cpl > 0 ? Number(t.quantity_litres) * (cpl / 100) : Number(t.total_aud)
+    const key      = days <= 30 ? t.transaction_date : weekStart(t.transaction_date)
     const existing = bucketMap[key] ?? { spend: 0, pump: 0 }
     bucketMap[key] = {
       spend: existing.spend + Number(t.total_aud),
-      pump:  existing.pump  + pumpAmt,
+      pump:  existing.pump  + pumpAmt(t),
     }
   }
   const chartBuckets = Object.entries(bucketMap)

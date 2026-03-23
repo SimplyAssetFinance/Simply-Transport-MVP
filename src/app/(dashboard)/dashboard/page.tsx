@@ -6,6 +6,7 @@ import { Truck, ShieldCheck, Wrench, DollarSign, FileWarning, Users } from 'luci
 import { ComplianceHoverTile } from '@/components/compliance-hover-tile'
 import { DriverComplianceHoverTile } from '@/components/driver-compliance-hover-tile'
 import { FuelSpendTile } from '@/components/fuel-spend-tile'
+import { OtherChargesTile } from '@/components/other-charges-tile'
 import type { DriverHoverItem } from '@/components/driver-compliance-hover-tile'
 import Link from 'next/link'
 import { format, parseISO, addDays, differenceInDays } from 'date-fns'
@@ -216,8 +217,11 @@ export default async function DashboardPage() {
         </Card>
       )}
 
-      {/* Fuel Spend */}
-      <FuelSpendTile />
+      {/* Fuel Spend + Other Charges */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+        <FuelSpendTile />
+        <OtherChargesTile />
+      </div>
 
       {/* Operating Costs */}
       <Card className="bg-slate-900 border-slate-800">

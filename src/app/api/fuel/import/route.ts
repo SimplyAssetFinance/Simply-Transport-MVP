@@ -35,9 +35,15 @@ function parseDate(raw: string): string | null {
 }
 
 const FUEL_PRODUCTS = /diesel|petrol|unleaded|e10|lpg|adblue|vpower|v-power/i
+// GST-free items (bottled water, certain foods) — excluded from other charges tile
+const GST_FREE     = /gst.free|gst free/i
 
 function isFuelProduct(product: string): boolean {
   return FUEL_PRODUCTS.test(product)
+}
+
+function isGstFree(product: string): boolean {
+  return GST_FREE.test(product)
 }
 
 function parseAmount(raw: string): number {
@@ -107,7 +113,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Failed to create import record' }, { status: 500 })
   }
 
-  const transactions: object[] = []
+  const transactions:   object[] = []
+  const otherCharges:   object[] = []
   let skipped = 0
 
   for (let i = 1; i < rows.length; i++) {
@@ -117,54 +124,87 @@ export async function POST(req: NextRequest) {
     const dateStr = parseDate(row[iDate] ?? '')
     if (!dateStr) { skipped++; continue }
 
-    const qty       = parseAmount(row[iQty] ?? '0')
-    const site      = iSite !== -1 ? (row[iSite] ?? '').trim() : ''
     const product   = iProduct !== -1 ? (row[iProduct] ?? '').trim() : ''
     // Prefer Shell card amount (actual charge after discount); fall back to docket total
     const cardAmt   = iCardAmt !== -1 ? parseAmount(row[iCardAmt] ?? '0') : 0
     const pumpTotal = iTotal   !== -1 ? parseAmount(row[iTotal]   ?? '0') : 0
     const totalAud  = cardAmt > 0 ? cardAmt : pumpTotal
+    const gstAud    = iGST !== -1 ? parseAmount(row[iGST] ?? '0') || null : null
+    const cardNo    = iCard !== -1 ? (row[iCard] ?? '').trim() : ''
 
-    if (!qty || !totalAud || !site) { skipped++; continue }
-    if (!isFuelProduct(product)) { skipped++; continue }
+    if (isFuelProduct(product)) {
+      const qty  = parseAmount(row[iQty] ?? '0')
+      const site = iSite !== -1 ? (row[iSite] ?? '').trim() : ''
+      if (!qty || !totalAud || !site) { skipped++; continue }
 
-    transactions.push({
-      user_id:          user.id,
-      import_id:        importRecord.id,
-      transaction_date: dateStr,
-      card_number:      iCard !== -1 ? (row[iCard] ?? '').trim() : '',
-      driver_name:      iDriver !== -1 ? row[iDriver] || null : null,
-      vehicle_rego:     iRego !== -1 ? row[iRego] || null : null,
-      site_name:        site,
-      site_address:     iAddr !== -1 ? row[iAddr] || null : null,
-      product:          product || 'Diesel',
-      quantity_litres:  qty,
-      // Store pump price in ¢/L (pumpPrice column is in $/L → × 100)
-      unit_price_cpl:   iPrice !== -1 ? parseAmount(row[iPrice] ?? '0') * 100 : 0,
-      total_aud:        totalAud,
-      gst_aud:          iGST !== -1 ? parseAmount(row[iGST] ?? '0') || null : null,
-    })
+      transactions.push({
+        user_id:          user.id,
+        import_id:        importRecord.id,
+        transaction_date: dateStr,
+        card_number:      cardNo,
+        driver_name:      iDriver !== -1 ? row[iDriver] || null : null,
+        vehicle_rego:     iRego   !== -1 ? row[iRego]   || null : null,
+        site_name:        site,
+        site_address:     iAddr   !== -1 ? row[iAddr]   || null : null,
+        product:          product || 'Diesel',
+        quantity_litres:  qty,
+        // Unit pump price in ¢/L (pumpPrice column is $/L → × 100)
+        unit_price_cpl:   iPrice !== -1 ? parseAmount(row[iPrice] ?? '0') * 100 : 0,
+        // Column L: board price total incl GST (docketAmount) — used for savings comparison
+        pump_total_aud:   pumpTotal > 0 ? pumpTotal : null,
+        total_aud:        totalAud,
+        gst_aud:          gstAud,
+      })
+    } else if (!isGstFree(product) && totalAud > 0 && product) {
+      // Non-fuel, taxable charges: admin fees, groceries, drinks, confectionery, etc.
+      otherCharges.push({
+        user_id:          user.id,
+        import_id:        importRecord.id,
+        transaction_date: dateStr,
+        card_number:      cardNo,
+        description:      product,
+        total_aud:        totalAud,
+        gst_aud:          gstAud,
+      })
+    } else {
+      skipped++
+    }
   }
 
-  if (transactions.length === 0) {
+  if (transactions.length === 0 && otherCharges.length === 0) {
     return NextResponse.json({ error: 'No valid transactions found — check the file format' }, { status: 400 })
   }
 
-  // Upsert — ignore rows that conflict on the unique dedup index
-  const { error: txError } = await supabase
-    .from('fuel_transactions')
-    .upsert(transactions, {
-      onConflict:       'user_id,transaction_date,card_number,site_name,total_aud',
-      ignoreDuplicates: true,
-    })
+  // Upsert fuel transactions
+  if (transactions.length > 0) {
+    const { error: txError } = await supabase
+      .from('fuel_transactions')
+      .upsert(transactions, {
+        onConflict:       'user_id,transaction_date,card_number,site_name,total_aud',
+        ignoreDuplicates: true,
+      })
+    if (txError) {
+      return NextResponse.json({ error: 'Failed to save fuel transactions' }, { status: 500 })
+    }
+  }
 
-  if (txError) {
-    return NextResponse.json({ error: 'Failed to save transactions' }, { status: 500 })
+  // Upsert other charges
+  if (otherCharges.length > 0) {
+    const { error: ocError } = await supabase
+      .from('other_charges')
+      .upsert(otherCharges, {
+        onConflict:       'user_id,transaction_date,card_number,description,total_aud',
+        ignoreDuplicates: true,
+      })
+    if (ocError) {
+      return NextResponse.json({ error: 'Failed to save other charges' }, { status: 500 })
+    }
   }
 
   return NextResponse.json({
-    import_id:     importRecord.id,
-    rows_imported: transactions.length,
-    rows_skipped:  skipped,
+    import_id:            importRecord.id,
+    rows_imported:        transactions.length,
+    other_charges_saved:  otherCharges.length,
+    rows_skipped:         skipped,
   })
 }

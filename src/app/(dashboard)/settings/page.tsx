@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { User, CreditCard } from 'lucide-react'
 import { FuelSettings } from './fuel-settings'
+import { FuelImportCard } from './fuel-import'
 import { NotificationSettingsCard } from '@/components/notification-settings'
 
 export default async function SettingsPage() {
@@ -67,6 +68,8 @@ export default async function SettingsPage() {
       </Card>
 
       <FuelSettings />
+
+      <FuelImportCard />
 
       <NotificationSettingsCard />
     </div>

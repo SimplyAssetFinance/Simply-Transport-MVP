@@ -5,6 +5,7 @@ import { ComplianceBadge } from '@/components/compliance-badge'
 import { Truck, ShieldCheck, Wrench, DollarSign, FileWarning, Users } from 'lucide-react'
 import { ComplianceHoverTile } from '@/components/compliance-hover-tile'
 import { DriverComplianceHoverTile } from '@/components/driver-compliance-hover-tile'
+import { FuelSpendTile } from '@/components/fuel-spend-tile'
 import type { DriverHoverItem } from '@/components/driver-compliance-hover-tile'
 import Link from 'next/link'
 import { format, parseISO, addDays, differenceInDays } from 'date-fns'
@@ -214,6 +215,9 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Fuel Spend */}
+      <FuelSpendTile />
 
       {/* Operating Costs */}
       <Card className="bg-slate-900 border-slate-800">

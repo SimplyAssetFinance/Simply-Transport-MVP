@@ -260,6 +260,36 @@ export function itemComplianceStatus(expiryDate: string | null): DriverComplianc
   return 'ok'
 }
 
+// ── Fuel Tracking ────────────────────────────────────────────────────────────
+
+export interface FuelImport {
+  id:          string
+  user_id:     string
+  filename:    string
+  provider:    string | null
+  row_count:   number | null
+  status:      'complete' | 'error'
+  uploaded_at: string
+}
+
+export interface FuelTransaction {
+  id:               string
+  user_id:          string
+  import_id:        string | null
+  transaction_date: string
+  card_number:      string
+  driver_name:      string | null
+  vehicle_rego:     string | null
+  site_name:        string
+  site_address:     string | null
+  product:          string
+  quantity_litres:  number
+  unit_price_cpl:   number
+  total_aud:        number
+  gst_aud:          number | null
+  created_at:       string
+}
+
 // Shell first, then alphabetical
 export const FUEL_CARD_OPTIONS: FuelCardProvider[] = [
   'Shell',

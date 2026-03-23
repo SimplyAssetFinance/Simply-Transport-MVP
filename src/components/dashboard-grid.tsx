@@ -1,9 +1,11 @@
 'use client'
 import { useState, useEffect } from 'react'
-import ReactGridLayout, { WidthProvider, type Layout } from 'react-grid-layout'
+// react-grid-layout uses CJS `export =` — default import gives the class + namespace members
+import ReactGridLayout from 'react-grid-layout'
 import { GripVertical } from 'lucide-react'
 
-const RGL = WidthProvider(ReactGridLayout)
+type Layout = ReactGridLayout.Layout
+const RGL = ReactGridLayout.WidthProvider(ReactGridLayout)
 
 export type TileId =
   | 'summary'

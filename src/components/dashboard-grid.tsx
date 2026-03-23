@@ -41,15 +41,15 @@ const DEFAULT_ORDER: TileId[] = [
 ]
 
 const DEFAULT_SIZES: Record<TileId, TileSize> = {
-  summary:          'full',
-  driverCompliance: 'full',
-  maintenance:      'full',
-  documentAlerts:   'full',
-  fuelSpend:        'full',
-  otherCharges:     'full',
-  operatingCosts:   'full',
-  complianceAlerts: 'half',
-  fuelPrices:       'half',
+  summary:          6,
+  driverCompliance: 6,
+  maintenance:      6,
+  documentAlerts:   6,
+  fuelSpend:        6,
+  otherCharges:     6,
+  operatingCosts:   6,
+  complianceAlerts: 3,
+  fuelPrices:       3,
 }
 
 const TILE_LABELS: Record<TileId, string> = {
@@ -100,7 +100,16 @@ export function DashboardGrid(props: DashboardGridProps) {
 
     try {
       const raw = localStorage.getItem(SIZES_KEY)
-      if (raw) setSizes(prev => ({ ...prev, ...JSON.parse(raw) }))
+      if (raw) {
+        const saved = JSON.parse(raw) as Record<string, unknown>
+        const valid: Partial<Record<TileId, TileSize>> = {}
+        for (const [k, v] of Object.entries(saved)) {
+          if (DEFAULT_ORDER.includes(k as TileId) && [1,2,3,4,5,6].includes(v as number)) {
+            valid[k as TileId] = v as TileSize
+          }
+        }
+        setSizes(prev => ({ ...prev, ...valid }))
+      }
     } catch { /* ignore */ }
   }, [])
 
@@ -133,9 +142,9 @@ export function DashboardGrid(props: DashboardGridProps) {
     })
   }
 
-  function toggleSize(id: TileId) {
+  function handleResize(id: TileId, newSize: TileSize) {
     setSizes(prev => {
-      const next = { ...prev, [id]: prev[id] === 'half' ? 'full' : 'half' } as Record<TileId, TileSize>
+      const next = { ...prev, [id]: newSize }
       try { localStorage.setItem(SIZES_KEY, JSON.stringify(next)) } catch { /* ignore */ }
       return next
     })
@@ -180,16 +189,16 @@ export function DashboardGrid(props: DashboardGridProps) {
         onDragEnd={handleDragEnd}
       >
         <SortableContext items={visible} strategy={rectSortingStrategy}>
-          {/* 2-column grid: tiles use col-span-1 (half) or col-span-2 (full) */}
-          <div className="grid grid-cols-2 gap-6">
+          {/* 6-column grid: tiles span 1–6 columns */}
+          <div className="grid grid-cols-6 gap-6">
             {visible.map(id => (
               <SortableTile
                 key={id}
                 id={id}
                 label={TILE_LABELS[id]}
-                size={sizes[id] ?? 'full'}
+                size={sizes[id] ?? 6}
                 editMode={editMode}
-                onToggleSize={() => toggleSize(id)}
+                onResize={(s) => handleResize(id, s)}
               >
                 {tileContent[id]}
               </SortableTile>

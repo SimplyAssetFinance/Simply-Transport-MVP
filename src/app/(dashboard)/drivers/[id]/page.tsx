@@ -90,7 +90,8 @@ export default function DriverProfilePage() {
   if (!driver) return <div className="text-slate-400">Loading…</div>
 
   return (
-    <div className="max-w-2xl space-y-6">
+    <div className="max-w-6xl space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Link href="/drivers">
@@ -107,122 +108,128 @@ export default function DriverProfilePage() {
         </Button>
       </div>
 
-      <form onSubmit={handleSave} className="space-y-6">
-        {/* Basic Details */}
-        <Card className="bg-slate-900 border-slate-800">
-          <CardHeader><CardTitle className="text-white text-base">Basic Details</CardTitle></CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="text-slate-300">First Name</Label>
-                <Input value={form.first_name} onChange={e => set('first_name', e.target.value)}
-                  className="bg-slate-800 border-slate-700 text-white" required />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-slate-300">Last Name</Label>
-                <Input value={form.last_name} onChange={e => set('last_name', e.target.value)}
-                  className="bg-slate-800 border-slate-700 text-white" required />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="text-slate-300">Mobile</Label>
-                <Input value={form.mobile} onChange={e => set('mobile', e.target.value)}
-                  type="tel" className="bg-slate-800 border-slate-700 text-white" required />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-slate-300">Email</Label>
-                <Input value={form.email} onChange={e => set('email', e.target.value)}
-                  type="email" className="bg-slate-800 border-slate-700 text-white" />
-              </div>
-            </div>
-            <div className="grid grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label className="text-slate-300">Date of Birth</Label>
-                <Input value={form.date_of_birth} onChange={e => set('date_of_birth', e.target.value)}
-                  type="date" className="bg-slate-800 border-slate-700 text-white" />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-slate-300">Employee ID</Label>
-                <Input value={form.employee_id} onChange={e => set('employee_id', e.target.value)}
-                  className="bg-slate-800 border-slate-700 text-white" placeholder="EMP-001" />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-slate-300">Start Date</Label>
-                <Input value={form.start_date} onChange={e => set('start_date', e.target.value)}
-                  type="date" className="bg-slate-800 border-slate-700 text-white" />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-slate-300">Status</Label>
-              <Select value={form.status} onValueChange={v => v && set('status', v)}>
-                <SelectTrigger className="bg-slate-800 border-slate-700 text-white"><SelectValue /></SelectTrigger>
-                <SelectContent className="bg-slate-800 border-slate-700">
-                  <SelectItem value="active"   className="text-white">Active</SelectItem>
-                  <SelectItem value="inactive" className="text-white">Inactive</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Two-column layout */}
+      <div className="grid grid-cols-[3fr_2fr] gap-6 items-start">
 
-        {/* Emergency Contact */}
-        <Card className="bg-slate-900 border-slate-800">
-          <CardHeader><CardTitle className="text-white text-base">Emergency Contact</CardTitle></CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="text-slate-300">Name</Label>
-                <Input value={form.emergency_contact_name} onChange={e => set('emergency_contact_name', e.target.value)}
-                  className="bg-slate-800 border-slate-700 text-white" />
+        {/* Left — profile form */}
+        <form onSubmit={handleSave} className="space-y-4">
+          {/* Basic Details */}
+          <Card className="bg-slate-900 border-slate-800">
+            <CardHeader><CardTitle className="text-white text-base">Basic Details</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-slate-300">First Name</Label>
+                  <Input value={form.first_name} onChange={e => set('first_name', e.target.value)}
+                    className="bg-slate-800 border-slate-700 text-white" required />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-slate-300">Last Name</Label>
+                  <Input value={form.last_name} onChange={e => set('last_name', e.target.value)}
+                    className="bg-slate-800 border-slate-700 text-white" required />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-slate-300">Mobile</Label>
+                  <Input value={form.mobile} onChange={e => set('mobile', e.target.value)}
+                    type="tel" className="bg-slate-800 border-slate-700 text-white" required />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-slate-300">Email</Label>
+                  <Input value={form.email} onChange={e => set('email', e.target.value)}
+                    type="email" className="bg-slate-800 border-slate-700 text-white" />
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-slate-300">Date of Birth</Label>
+                  <Input value={form.date_of_birth} onChange={e => set('date_of_birth', e.target.value)}
+                    type="date" className="bg-slate-800 border-slate-700 text-white" />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-slate-300">Employee ID</Label>
+                  <Input value={form.employee_id} onChange={e => set('employee_id', e.target.value)}
+                    className="bg-slate-800 border-slate-700 text-white" placeholder="EMP-001" />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-slate-300">Start Date</Label>
+                  <Input value={form.start_date} onChange={e => set('start_date', e.target.value)}
+                    type="date" className="bg-slate-800 border-slate-700 text-white" />
+                </div>
               </div>
               <div className="space-y-2">
-                <Label className="text-slate-300">Phone</Label>
-                <Input value={form.emergency_contact_phone} onChange={e => set('emergency_contact_phone', e.target.value)}
-                  type="tel" className="bg-slate-800 border-slate-700 text-white" />
+                <Label className="text-slate-300">Status</Label>
+                <Select value={form.status} onValueChange={v => v && set('status', v)}>
+                  <SelectTrigger className="bg-slate-800 border-slate-700 text-white"><SelectValue /></SelectTrigger>
+                  <SelectContent className="bg-slate-800 border-slate-700">
+                    <SelectItem value="active"   className="text-white">Active</SelectItem>
+                    <SelectItem value="inactive" className="text-white">Inactive</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-slate-300">Relationship</Label>
-              <Input value={form.emergency_contact_relationship} onChange={e => set('emergency_contact_relationship', e.target.value)}
-                className="bg-slate-800 border-slate-700 text-white" placeholder="e.g. Partner, Parent" />
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        {/* Notes */}
-        <Card className="bg-slate-900 border-slate-800">
-          <CardHeader><CardTitle className="text-white text-base">Notes</CardTitle></CardHeader>
-          <CardContent>
-            <Textarea value={form.notes} onChange={e => set('notes', e.target.value)}
-              className="bg-slate-800 border-slate-700 text-white min-h-[80px]" />
-          </CardContent>
-        </Card>
+          {/* Emergency Contact */}
+          <Card className="bg-slate-900 border-slate-800">
+            <CardHeader><CardTitle className="text-white text-base">Emergency Contact</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-slate-300">Name</Label>
+                  <Input value={form.emergency_contact_name} onChange={e => set('emergency_contact_name', e.target.value)}
+                    className="bg-slate-800 border-slate-700 text-white" />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-slate-300">Phone</Label>
+                  <Input value={form.emergency_contact_phone} onChange={e => set('emergency_contact_phone', e.target.value)}
+                    type="tel" className="bg-slate-800 border-slate-700 text-white" />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-slate-300">Relationship</Label>
+                <Input value={form.emergency_contact_relationship} onChange={e => set('emergency_contact_relationship', e.target.value)}
+                  className="bg-slate-800 border-slate-700 text-white" placeholder="e.g. Partner, Parent" />
+              </div>
+            </CardContent>
+          </Card>
 
-        <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700" disabled={loading}>
-          {loading ? 'Saving…' : 'Save Changes'}
-        </Button>
-      </form>
+          {/* Notes */}
+          <Card className="bg-slate-900 border-slate-800">
+            <CardHeader><CardTitle className="text-white text-base">Notes</CardTitle></CardHeader>
+            <CardContent>
+              <Textarea value={form.notes} onChange={e => set('notes', e.target.value)}
+                className="bg-slate-800 border-slate-700 text-white min-h-[80px]" />
+            </CardContent>
+          </Card>
 
-      {/* Compliance Items */}
-      {userId && (
-        <Card className="bg-slate-900 border-slate-800">
-          <CardHeader><CardTitle className="text-white text-base">Compliance Items</CardTitle></CardHeader>
-          <CardContent>
-            <DriverComplianceItems driverId={params.id as string} userId={userId} />
-          </CardContent>
-        </Card>
-      )}
+          <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700" disabled={loading}>
+            {loading ? 'Saving…' : 'Save Changes'}
+          </Button>
+        </form>
 
-      {/* Documents */}
-      {userId && (
-        <Card className="bg-slate-900 border-slate-800">
-          <CardHeader><CardTitle className="text-white text-base">Documents</CardTitle></CardHeader>
-          <CardContent>
-            <DriverDocuments driverId={params.id as string} userId={userId} />
-          </CardContent>
-        </Card>
-      )}
+        {/* Right — compliance & documents */}
+        <div className="space-y-4">
+          {userId && (
+            <Card className="bg-slate-900 border-slate-800">
+              <CardHeader><CardTitle className="text-white text-base">Compliance Items</CardTitle></CardHeader>
+              <CardContent>
+                <DriverComplianceItems driverId={params.id as string} userId={userId} />
+              </CardContent>
+            </Card>
+          )}
+          {userId && (
+            <Card className="bg-slate-900 border-slate-800">
+              <CardHeader><CardTitle className="text-white text-base">Documents</CardTitle></CardHeader>
+              <CardContent>
+                <DriverDocuments driverId={params.id as string} userId={userId} />
+              </CardContent>
+            </Card>
+          )}
+        </div>
+
+      </div>
     </div>
   )
 }

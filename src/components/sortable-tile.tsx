@@ -9,13 +9,14 @@ interface Props {
   id:           string
   label:        string
   size:         TileSize
+  editMode:     boolean
   onToggleSize: () => void
   children:     React.ReactNode
 }
 
-export function SortableTile({ id, label, size, onToggleSize, children }: Props) {
+export function SortableTile({ id, label, size, editMode, onToggleSize, children }: Props) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id })
+    useSortable({ id, disabled: !editMode })
 
   return (
     <div
@@ -28,37 +29,42 @@ export function SortableTile({ id, label, size, onToggleSize, children }: Props)
       }}
       className={size === 'half' ? 'col-span-1' : 'col-span-2'}
     >
-      {/* Controls — appear on hover over the tile */}
-      <div className="relative group/tile">
-        <div className="absolute -top-3 right-0 z-20 flex items-center gap-1 opacity-0 group-hover/tile:opacity-100 transition-opacity pointer-events-none group-hover/tile:pointer-events-auto">
-          {/* Size toggle */}
-          <button
-            onClick={onToggleSize}
-            title={size === 'full' ? 'Shrink to half width' : 'Expand to full width'}
-            className="flex items-center gap-1 px-2 py-0.5 bg-slate-800 border border-slate-700 rounded text-slate-500 hover:text-white transition-colors text-[11px]"
-          >
-            {size === 'full'
-              ? <><Minimize2 size={11} /><span>Half</span></>
-              : <><Maximize2 size={11} /><span>Full</span></>
-            }
-          </button>
+      {editMode && (
+        <div className="flex items-center justify-between mb-1.5 px-0.5">
+          {/* Label */}
+          <span className="text-slate-600 text-[11px] select-none">{label}</span>
 
-          {/* Drag handle */}
-          <button
-            {...attributes}
-            {...listeners}
-            style={{ touchAction: 'none' }}
-            aria-label={`Drag to reorder ${label}`}
-            className="flex items-center gap-1 px-2 py-0.5 bg-slate-800 border border-slate-700 rounded text-slate-500 hover:text-white cursor-grab active:cursor-grabbing transition-colors text-[11px]"
-          >
-            <GripVertical size={11} />
-            <span>{label}</span>
-          </button>
-        </div>
+          <div className="flex items-center gap-1">
+            {/* Size toggle */}
+            <button
+              onClick={onToggleSize}
+              title={size === 'full' ? 'Shrink to half width' : 'Expand to full width'}
+              className="flex items-center gap-1 px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-400 hover:text-white hover:border-slate-500 transition-colors text-[11px]"
+            >
+              {size === 'full'
+                ? <><Minimize2 size={11} /><span>Half</span></>
+                : <><Maximize2 size={11} /><span>Full</span></>
+              }
+            </button>
 
-        <div className="pt-3">
-          {children}
+            {/* Drag handle */}
+            <button
+              {...attributes}
+              {...listeners}
+              style={{ touchAction: 'none' }}
+              aria-label={`Drag to reorder ${label}`}
+              title="Drag to reorder"
+              className="flex items-center gap-1 px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-400 hover:text-white hover:border-slate-500 cursor-grab active:cursor-grabbing transition-colors text-[11px]"
+            >
+              <GripVertical size={11} />
+              <span>Move</span>
+            </button>
+          </div>
         </div>
+      )}
+
+      <div className={editMode ? 'ring-1 ring-blue-500/30 rounded-lg' : ''}>
+        {children}
       </div>
     </div>
   )

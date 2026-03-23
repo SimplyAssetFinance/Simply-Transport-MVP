@@ -82,8 +82,9 @@ export interface DashboardGridProps {
 export function DashboardGrid(props: DashboardGridProps) {
   // Always initialise with defaults — avoid hydration mismatch
   // (localStorage is only read after mount in useEffect)
-  const [order, setOrder] = useState<TileId[]>(DEFAULT_ORDER)
-  const [sizes, setSizes] = useState<Record<TileId, TileSize>>(DEFAULT_SIZES)
+  const [order,    setOrder]    = useState<TileId[]>(DEFAULT_ORDER)
+  const [sizes,    setSizes]    = useState<Record<TileId, TileSize>>(DEFAULT_SIZES)
+  const [editMode, setEditMode] = useState(false)
 
   useEffect(() => {
     try {
@@ -151,12 +152,25 @@ export function DashboardGrid(props: DashboardGridProps) {
 
   return (
     <div>
-      <div className="flex justify-end mb-3">
+      {/* Toolbar */}
+      <div className="flex items-center justify-end gap-3 mb-3">
+        {editMode && (
+          <button
+            onClick={resetLayout}
+            className="text-slate-600 hover:text-slate-400 text-xs transition-colors"
+          >
+            Reset to default
+          </button>
+        )}
         <button
-          onClick={resetLayout}
-          className="text-slate-600 hover:text-slate-400 text-xs transition-colors"
+          onClick={() => setEditMode(v => !v)}
+          className={`text-xs px-3 py-1 rounded border transition-colors ${
+            editMode
+              ? 'bg-blue-600 border-blue-500 text-white hover:bg-blue-700'
+              : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white hover:border-slate-500'
+          }`}
         >
-          Reset layout
+          {editMode ? 'Done' : 'Edit layout'}
         </button>
       </div>
 
@@ -174,6 +188,7 @@ export function DashboardGrid(props: DashboardGridProps) {
                 id={id}
                 label={TILE_LABELS[id]}
                 size={sizes[id] ?? 'full'}
+                editMode={editMode}
                 onToggleSize={() => toggleSize(id)}
               >
                 {tileContent[id]}

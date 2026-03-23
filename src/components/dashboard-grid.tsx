@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   DndContext,
   closestCenter,
@@ -12,10 +12,10 @@ import {
 import {
   SortableContext,
   sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
+  rectSortingStrategy,
   arrayMove,
 } from '@dnd-kit/sortable'
-import { SortableTile } from './sortable-tile'
+import { SortableTile, type TileSize } from './sortable-tile'
 
 export type TileId =
   | 'summary'
@@ -28,7 +28,7 @@ export type TileId =
   | 'complianceAlerts'
   | 'fuelPrices'
 
-export const DEFAULT_ORDER: TileId[] = [
+const DEFAULT_ORDER: TileId[] = [
   'summary',
   'driverCompliance',
   'maintenance',
@@ -39,6 +39,18 @@ export const DEFAULT_ORDER: TileId[] = [
   'complianceAlerts',
   'fuelPrices',
 ]
+
+const DEFAULT_SIZES: Record<TileId, TileSize> = {
+  summary:          'full',
+  driverCompliance: 'full',
+  maintenance:      'full',
+  documentAlerts:   'full',
+  fuelSpend:        'full',
+  otherCharges:     'full',
+  operatingCosts:   'full',
+  complianceAlerts: 'half',
+  fuelPrices:       'half',
+}
 
 const TILE_LABELS: Record<TileId, string> = {
   summary:          'Fleet Summary',
@@ -52,26 +64,10 @@ const TILE_LABELS: Record<TileId, string> = {
   fuelPrices:       "Today's Fuel Prices",
 }
 
-const STORAGE_KEY = 'dashboard-tile-order'
+const ORDER_KEY = 'dashboard-tile-order'
+const SIZES_KEY = 'dashboard-tile-sizes'
 
-function loadOrder(): TileId[] {
-  if (typeof window === 'undefined') return DEFAULT_ORDER
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return DEFAULT_ORDER
-    const saved = JSON.parse(raw) as string[]
-    // Keep saved order, append any new tiles not yet in saved list
-    const merged = [
-      ...saved.filter((id): id is TileId => DEFAULT_ORDER.includes(id as TileId)),
-      ...DEFAULT_ORDER.filter(id => !saved.includes(id)),
-    ]
-    return merged
-  } catch {
-    return DEFAULT_ORDER
-  }
-}
-
-interface Props {
+export interface DashboardGridProps {
   summary:           React.ReactNode
   driverCompliance?: React.ReactNode
   maintenance?:      React.ReactNode
@@ -83,8 +79,29 @@ interface Props {
   fuelPrices:        React.ReactNode
 }
 
-export function DashboardGrid(props: Props) {
-  const [order, setOrder] = useState<TileId[]>(loadOrder)
+export function DashboardGrid(props: DashboardGridProps) {
+  // Always initialise with defaults — avoid hydration mismatch
+  // (localStorage is only read after mount in useEffect)
+  const [order, setOrder] = useState<TileId[]>(DEFAULT_ORDER)
+  const [sizes, setSizes] = useState<Record<TileId, TileSize>>(DEFAULT_SIZES)
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(ORDER_KEY)
+      if (raw) {
+        const saved = JSON.parse(raw) as string[]
+        setOrder([
+          ...saved.filter((id): id is TileId => DEFAULT_ORDER.includes(id as TileId)),
+          ...DEFAULT_ORDER.filter(id => !saved.includes(id)),
+        ])
+      }
+    } catch { /* ignore */ }
+
+    try {
+      const raw = localStorage.getItem(SIZES_KEY)
+      if (raw) setSizes(prev => ({ ...prev, ...JSON.parse(raw) }))
+    } catch { /* ignore */ }
+  }, [])
 
   const tileContent: Record<TileId, React.ReactNode> = {
     summary:          props.summary,
@@ -98,32 +115,43 @@ export function DashboardGrid(props: Props) {
     fuelPrices:       props.fuelPrices,
   }
 
+  // Only sortable items that have real content
+  const visible = order.filter(id => Boolean(tileContent[id]))
+
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   )
 
-  function handleDragEnd(event: DragEndEvent) {
-    const { active, over } = event
+  function handleDragEnd({ active, over }: DragEndEvent) {
     if (!over || active.id === over.id) return
     setOrder(prev => {
-      const from = prev.indexOf(active.id as TileId)
-      const to   = prev.indexOf(over.id   as TileId)
-      const next = arrayMove(prev, from, to)
-      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)) } catch {}
+      const next = arrayMove(prev, prev.indexOf(active.id as TileId), prev.indexOf(over.id as TileId))
+      try { localStorage.setItem(ORDER_KEY, JSON.stringify(next)) } catch { /* ignore */ }
+      return next
+    })
+  }
+
+  function toggleSize(id: TileId) {
+    setSizes(prev => {
+      const next = { ...prev, [id]: prev[id] === 'half' ? 'full' : 'half' } as Record<TileId, TileSize>
+      try { localStorage.setItem(SIZES_KEY, JSON.stringify(next)) } catch { /* ignore */ }
       return next
     })
   }
 
   function resetLayout() {
-    try { localStorage.removeItem(STORAGE_KEY) } catch {}
     setOrder(DEFAULT_ORDER)
+    setSizes(DEFAULT_SIZES)
+    try {
+      localStorage.removeItem(ORDER_KEY)
+      localStorage.removeItem(SIZES_KEY)
+    } catch { /* ignore */ }
   }
 
   return (
-    <div className="space-y-1">
-      {/* Reset hint */}
-      <div className="flex justify-end mb-2">
+    <div>
+      <div className="flex justify-end mb-3">
         <button
           onClick={resetLayout}
           className="text-slate-600 hover:text-slate-400 text-xs transition-colors"
@@ -137,17 +165,20 @@ export function DashboardGrid(props: Props) {
         collisionDetection={closestCenter}
         onDragEnd={handleDragEnd}
       >
-        <SortableContext items={order} strategy={verticalListSortingStrategy}>
-          <div className="space-y-6 pt-2">
-            {order.map(id => {
-              const node = tileContent[id]
-              if (!node) return null
-              return (
-                <SortableTile key={id} id={id} label={TILE_LABELS[id]}>
-                  {node}
-                </SortableTile>
-              )
-            })}
+        <SortableContext items={visible} strategy={rectSortingStrategy}>
+          {/* 2-column grid: tiles use col-span-1 (half) or col-span-2 (full) */}
+          <div className="grid grid-cols-2 gap-6">
+            {visible.map(id => (
+              <SortableTile
+                key={id}
+                id={id}
+                label={TILE_LABELS[id]}
+                size={sizes[id] ?? 'full'}
+                onToggleSize={() => toggleSize(id)}
+              >
+                {tileContent[id]}
+              </SortableTile>
+            ))}
           </div>
         </SortableContext>
       </DndContext>

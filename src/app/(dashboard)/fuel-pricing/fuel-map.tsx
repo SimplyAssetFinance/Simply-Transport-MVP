@@ -38,6 +38,8 @@ function MapEvents({
 const STATE_CENTERS: Record<string, [number, number]> = {
   nsw: [-33.8688, 151.2093],
   wa:  [-31.9505, 115.8605],
+  qld: [-27.4698, 153.0251],
+  sa:  [-34.9285, 138.6007],
 }
 
 // Flies to the selected state capital when activeState changes
@@ -233,7 +235,7 @@ export default function FuelMap({ fuelCards }: Props) {
   const [loading,       setLoading]       = useState(false)
   const [apiError,      setApiError]      = useState<string | null>(null)
   const [fuelType,      setFuelType]      = useState<'diesel' | 'ulp'>('diesel')
-  const [activeState,   setActiveState]   = useState<'nsw' | 'wa'>('nsw')
+  const [activeState,   setActiveState]   = useState<'nsw' | 'wa' | 'qld' | 'sa'>('nsw')
   const [showBrands,    setShowBrands]    = useState(false)
   const [showPriceKey,  setShowPriceKey]  = useState(false)
 
@@ -242,7 +244,11 @@ export default function FuelMap({ fuelCards }: Props) {
     try {
       const ne       = bounds.getNorthEast()
       const sw       = bounds.getSouthWest()
-      const endpoint = activeState === 'wa' ? '/api/fuel-stations-wa' : '/api/fuel-stations'
+      const endpoint =
+        activeState === 'wa'  ? '/api/fuel-stations-wa'  :
+        activeState === 'qld' ? '/api/fuel-stations-qld' :
+        activeState === 'sa'  ? '/api/fuel-stations-sa'  :
+        '/api/fuel-stations'
       const res = await fetch(
         `${endpoint}?neLat=${ne.lat}&neLng=${ne.lng}&swLat=${sw.lat}&swLng=${sw.lng}&fuelType=${fuelType}`
       )
@@ -275,6 +281,8 @@ export default function FuelMap({ fuelCards }: Props) {
         {([
           { key: 'nsw', label: 'NSW' },
           { key: 'wa',  label: 'WA'  },
+          { key: 'qld', label: 'QLD' },
+          { key: 'sa',  label: 'SA'  },
         ] as const).map(({ key, label }) => (
           <button
             key={key}

@@ -126,7 +126,7 @@ async function scrapeIOR(): Promise<Record<string, number>> {
 
   const buffer = Buffer.from(await res.arrayBuffer())
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const pdfParse = require('pdf-parse/lib/pdf-parse.js') as (buf: Buffer) => Promise<{ text: string }>
+  const pdfParse = require('pdf-parse') as (buf: Buffer) => Promise<{ text: string }>
   const { text } = await pdfParse(buffer)
 
   const prices: Record<string, number> = {}

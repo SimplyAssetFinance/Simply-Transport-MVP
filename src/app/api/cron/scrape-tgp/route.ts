@@ -125,8 +125,9 @@ async function scrapeIOR(): Promise<Record<string, number>> {
   if (!res.ok) return {}
 
   const buffer = Buffer.from(await res.arrayBuffer())
+  // Use lib path to skip pdf-parse's own test-file read on require
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const pdfParse = require('pdf-parse') as (buf: Buffer) => Promise<{ text: string }>
+  const pdfParse = require('pdf-parse/lib/pdf-parse.js') as (buf: Buffer) => Promise<{ text: string }>
   const { text } = await pdfParse(buffer)
 
   const prices: Record<string, number> = {}

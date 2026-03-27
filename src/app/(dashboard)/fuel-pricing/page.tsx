@@ -33,7 +33,7 @@ function displayTerminal(t: string) {
   return t.replace(/\s*\(.*\)/, '')
 }
 
-const COLORS = { 'Shell Viva': '#f97316', BP: '#3b82f6', Ampol: '#22c55e' }
+const COLORS = { 'Shell Viva': '#f97316', BP: '#3b82f6', Ampol: '#22c55e', IOR: '#a855f7' }
 
 type Tab = 'live' | 'tgp'
 
@@ -92,6 +92,7 @@ export default function FuelPricingPage() {
       'Shell Viva': p.shell_viva,
       BP:           p.bp,
       Ampol:        p.ampol,
+      IOR:          p.ior,
     }))
 
   return (
@@ -195,6 +196,7 @@ export default function FuelPricingPage() {
                       <th className="text-right py-2 px-4 text-orange-400">Shell Viva</th>
                       <th className="text-right py-2 px-4 text-blue-400">BP</th>
                       <th className="text-right py-2 px-4 text-green-400">Ampol</th>
+                      <th className="text-right py-2 px-4 text-purple-400">IOR</th>
                       <th className="text-right py-2 px-4">Cheapest</th>
                       <th className="text-right py-2 pl-4">Spread</th>
                     </tr>
@@ -206,10 +208,11 @@ export default function FuelPricingPage() {
                         <td className="py-3 px-4 text-right text-slate-300">{row?.shell_viva ?? '—'}</td>
                         <td className="py-3 px-4 text-right text-slate-300">{row?.bp ?? '—'}</td>
                         <td className="py-3 px-4 text-right text-slate-300">{row?.ampol ?? '—'}</td>
+                        <td className="py-3 px-4 text-right text-slate-300">{row?.ior ?? '—'}</td>
                         <td className="py-3 px-4 text-right">
                           {row && (
                             <span className="text-green-400 font-semibold">
-                              {row.cheapest_provider} ({Math.min(row.shell_viva ?? 999, row.bp ?? 999, row.ampol ?? 999)}¢)
+                              {row.cheapest_provider} ({Math.min(row.shell_viva ?? 999, row.bp ?? 999, row.ampol ?? 999, row.ior ?? 999)}¢)
                             </span>
                           )}
                         </td>

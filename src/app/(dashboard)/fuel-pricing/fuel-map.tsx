@@ -170,7 +170,7 @@ function createFuelIcon(brand: string, price: number | null, color: string, isTr
 
 // ── Card → site network matching ─────────────────────────────────────────────
 const CARD_NETWORKS: Partial<Record<FuelCardProvider, string[]>> = {
-  'Shell':              ['shell', 'coles express', 'reddy', 'viva', 'liberty', 'otr'],
+  'Shell':              ['shell', 'coles express', 'reddy', 'viva', 'liberty', 'otr', 'on the run'],
   'AmpolCard':          ['ampol', 'caltex', 'eg ampol'],
   'BP Plus':            ['bp'],
   '7-Eleven Fuel Pass': ['7-eleven'],

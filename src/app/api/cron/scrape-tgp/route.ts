@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server'
 import * as cheerio from 'cheerio'
 import { createClient } from '@supabase/supabase-js'
+// pdf-parse/lib path avoids Next.js build-time readFileSync issue
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const pdfParse = require('pdf-parse/lib/pdf-parse.js') as (buf: Buffer) => Promise<{ text: string }>
 
 // Service role client — bypasses RLS for inserts
 function getAdminClient() {
@@ -106,6 +109,46 @@ async function scrapeAIP(): Promise<Record<string, { bp: number | null; ampol: n
   return result
 }
 
+// IOR location name → our terminal name
+const IOR_LOCATION_MAP: Record<string, string> = {
+  'sydney':    'Sydney (Silverwater)',
+  'newcastle': 'Newcastle (Mayfield)',
+  'brisbane':  'Brisbane (Pinkenba)',
+  'melbourne': 'Melbourne (Newport)',
+  'adelaide':  'Adelaide (Birkenhead)',
+  'perth':     'Perth (Kwinana)',
+  'darwin':    'Darwin',
+}
+
+async function scrapeIOR(): Promise<Record<string, number>> {
+  const res = await fetch('https://customer.ior.com.au/TerminalGatePrices/CurrentTgpFile', {
+    headers: { 'User-Agent': 'Mozilla/5.0 (compatible; SimplyTransport/1.0)' },
+    next: { revalidate: 0 },
+  })
+  if (!res.ok) return {}
+
+  const buffer = Buffer.from(await res.arrayBuffer())
+  const { text } = await pdfParse(buffer)
+
+  const prices: Record<string, number> = {}
+
+  for (const line of text.split('\n')) {
+    const lower = line.toLowerCase().trim()
+    if (!lower) continue
+    for (const [loc, terminal] of Object.entries(IOR_LOCATION_MAP)) {
+      if (lower.includes(loc)) {
+        // First price in diesel range on this line is Diesel 10ppm (leftmost column)
+        const matches = [...line.matchAll(/(\d{3,4}\.\d{2})/g)].map(m => parseFloat(m[1]))
+        const diesel = matches.find(p => p >= 200 && p <= 500)
+        if (diesel !== undefined && !prices[terminal]) prices[terminal] = diesel
+        break
+      }
+    }
+  }
+
+  return prices
+}
+
 export async function GET(request: Request) {
   // Verify cron secret to prevent unauthorized calls
   const authHeader = request.headers.get('authorization')
@@ -116,9 +159,10 @@ export async function GET(request: Request) {
   try {
     const today = new Date().toISOString().split('T')[0]
 
-    const [vivaData, aipData] = await Promise.all([
+    const [vivaData, aipData, iorData] = await Promise.all([
       scrapeVivaEnergy(),
       scrapeAIP(),
+      scrapeIOR(),
     ])
 
     const terminals = [...new Set([...Object.keys(vivaData), ...Object.keys(aipData)])]
@@ -128,11 +172,13 @@ export async function GET(request: Request) {
       const shell = vivaData[terminal] ?? null
       const bp    = aipData[terminal]?.bp ?? null
       const ampol = aipData[terminal]?.ampol ?? null
+      const ior   = iorData[terminal] ?? null
 
       const prices: Record<string, number> = {}
       if (shell) prices['Shell Viva'] = shell
       if (bp)    prices['BP']         = bp
       if (ampol) prices['Ampol']      = ampol
+      if (ior)   prices['IOR']        = ior
 
       const vals = Object.values(prices)
       if (vals.length === 0) continue
@@ -147,6 +193,7 @@ export async function GET(request: Request) {
         shell_viva: shell,
         bp,
         ampol,
+        ior,
         cheapest_provider: cheapest,
         spread: vals.length > 1 ? +(maxPrice - minPrice).toFixed(2) : 0,
       })

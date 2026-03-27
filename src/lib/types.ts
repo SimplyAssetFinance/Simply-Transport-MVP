@@ -26,6 +26,7 @@ export interface TGPPrice {
   shell_viva: number | null
   bp: number | null
   ampol: number | null
+  ior: number | null
   cheapest_provider: string | null
   spread: number | null
 }

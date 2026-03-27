@@ -11,10 +11,10 @@ const COUNTRY_ID    = 21
 const GEO_LEVEL     = 3
 const GEO_REGION_ID = 4   // South Australia
 
-// FPD fuel type IDs — verify via /Subscriber/GetCountryFuelTypes if needed
+// FPD fuel type IDs (verified via /Subscriber/GetCountryFuelTypes)
 const FUEL_TYPE_IDS: Record<string, number> = {
-  diesel: 5,
-  ulp:    2,
+  diesel: 3,   // Diesel
+  ulp:    2,   // Unleaded
 }
 
 function authHeader(): string {
@@ -24,7 +24,7 @@ function authHeader(): string {
 interface FpdSite {
   S:   number   // SiteId
   N:   string   // Name
-  B:   string   // Brand
+  B:   number   // BrandId (resolved via GetCountryBrands)
   A:   string   // Address
   Lat: number
   Lng: number
@@ -73,9 +73,10 @@ export async function GET(request: NextRequest) {
   const params = `countryId=${COUNTRY_ID}&geoRegionLevel=${GEO_LEVEL}&geoRegionId=${GEO_REGION_ID}`
 
   try {
-    const [sitesRes, pricesRes] = await Promise.all([
-      fetch(`${SA_BASE}/Subscriber/GetFullSiteDetails?${params}`, { headers, next: { revalidate: 3600 } }),
-      fetch(`${SA_BASE}/Price/GetSitesPrices?${params}`,          { headers, next: { revalidate: 1800 } }),
+    const [sitesRes, pricesRes, brandsRes] = await Promise.all([
+      fetch(`${SA_BASE}/Subscriber/GetFullSiteDetails?${params}`,           { headers, next: { revalidate: 3600 } }),
+      fetch(`${SA_BASE}/Price/GetSitesPrices?${params}`,                    { headers, next: { revalidate: 1800 } }),
+      fetch(`${SA_BASE}/Subscriber/GetCountryBrands?countryId=${COUNTRY_ID}`, { headers, next: { revalidate: 86400 } }),
     ])
 
     if (!sitesRes.ok)  throw new Error(`Sites API ${sitesRes.status}: ${await sitesRes.text()}`)
@@ -83,6 +84,15 @@ export async function GET(request: NextRequest) {
 
     const sitesData  = await sitesRes.json()
     const pricesData = await pricesRes.json()
+
+    // Build brand ID → name lookup
+    const brandMap: Record<number, string> = {}
+    if (brandsRes.ok) {
+      const brandsData = await brandsRes.json()
+      for (const b of (brandsData.Brands ?? [])) {
+        brandMap[b.BrandId] = b.Name
+      }
+    }
 
     // Build site index keyed by SiteId
     const rawSites: FpdSite[] = sitesData.S ?? sitesData.Sites ?? []
@@ -105,10 +115,13 @@ export async function GET(request: NextRequest) {
         if (lat == null || lng == null) return null
         if (lat < swLat || lat > neLat || lng < swLng || lng > neLng) return null
 
+        const brandId = site.B ?? (site as any).BrandId
+        const brand   = brandMap[brandId] ?? (site as any).Brand ?? 'Unknown'
+
         return {
           id:      `sa-${p.SiteId}`,
           name:    site.N ?? (site as any).Name ?? 'Unknown',
-          brand:   site.B ?? (site as any).Brand ?? 'Unknown',
+          brand,
           address: site.A ?? (site as any).Address ?? '',
           lat:     Number(lat),
           lng:     Number(lng),

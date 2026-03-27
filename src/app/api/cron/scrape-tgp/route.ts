@@ -1,9 +1,8 @@
 import { NextResponse } from 'next/server'
 import * as cheerio from 'cheerio'
 import { createClient } from '@supabase/supabase-js'
-// pdf-parse/lib path avoids Next.js build-time readFileSync issue
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const pdfParse = require('pdf-parse/lib/pdf-parse.js') as (buf: Buffer) => Promise<{ text: string }>
+const pdfParse = require('pdf-parse') as (buf: Buffer) => Promise<{ text: string }>
 
 // Service role client — bypasses RLS for inserts
 function getAdminClient() {

@@ -112,6 +112,14 @@ export default async function DashboardPage() {
   // ── Tile content ────────────────────────────────────────────────────────────
 
   const summaryTile = (
+    <div>
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <Truck size={18} className="text-blue-400" />
+          <span className="text-white font-semibold">Vehicle Compliance</span>
+        </div>
+        <Link href="/vehicles" className="text-blue-400 text-sm hover:underline">View all vehicles</Link>
+      </div>
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
       <Card className="bg-slate-900 border-slate-800">
         <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -125,6 +133,7 @@ export default async function DashboardPage() {
       </Card>
       <ComplianceHoverTile variant="overdue"  items={overdue} />
       <ComplianceHoverTile variant="due-week" items={dueWeek} extraCount={dueMonth.length} />
+    </div>
     </div>
   )
 

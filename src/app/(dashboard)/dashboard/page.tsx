@@ -128,7 +128,7 @@ export default async function DashboardPage() {
     </div>
   )
 
-  const driverComplianceTile = activeDrivers.length > 0 ? (
+  const driverComplianceTile = (
     <div>
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
@@ -137,14 +137,21 @@ export default async function DashboardPage() {
         </div>
         <Link href="/drivers" className="text-blue-400 text-sm hover:underline">View all drivers</Link>
       </div>
-      <div className="grid grid-cols-4 gap-4">
-        <DriverComplianceHoverTile variant="active"         count={activeDrivers.length} />
-        <DriverComplianceHoverTile variant="ok"             count={driverOk} />
-        <DriverComplianceHoverTile variant="due_this_month" count={driverDueMonth} items={dueMonthDriverItems} />
-        <DriverComplianceHoverTile variant="overdue"        count={driverOverdue}  items={overdueDriverItems} />
-      </div>
+      {activeDrivers.length === 0 ? (
+        <div className="text-center py-6">
+          <Users size={32} className="text-slate-600 mx-auto mb-2" />
+          <p className="text-slate-400 text-sm">No active drivers in your fleet</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-4 gap-4">
+          <DriverComplianceHoverTile variant="active"         count={activeDrivers.length} />
+          <DriverComplianceHoverTile variant="ok"             count={driverOk} />
+          <DriverComplianceHoverTile variant="due_this_month" count={driverDueMonth} items={dueMonthDriverItems} />
+          <DriverComplianceHoverTile variant="overdue"        count={driverOverdue}  items={overdueDriverItems} />
+        </div>
+      )}
     </div>
-  ) : undefined
+  )
 
   const maintenanceTile = scheduledMaint && scheduledMaint.length > 0 ? (
     <Card className="bg-slate-900 border-slate-800">
@@ -210,14 +217,7 @@ export default async function DashboardPage() {
 
   const operatingCostsTile = (
     <Card className="bg-slate-900 border-slate-800">
-      <CardHeader className="flex flex-row items-center justify-between">
-        <div className="flex items-center gap-2">
-          <DollarSign size={18} className="text-green-400" />
-          <CardTitle className="text-white">Operating Costs</CardTitle>
-        </div>
-        <Link href="/vehicles" className="text-blue-400 text-sm hover:underline">View vehicles</Link>
-      </CardHeader>
-      <CardContent>
+      <CardContent className="pt-6">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           <div className="space-y-3">
             <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Actuals</p>

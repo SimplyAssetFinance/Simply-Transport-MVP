@@ -112,54 +112,56 @@ export default async function DashboardPage() {
   // ── Tile content ────────────────────────────────────────────────────────────
 
   const summaryTile = (
-    <div>
-      <div className="flex items-center justify-between mb-3">
+    <Card className="bg-slate-900 border-slate-800 h-full">
+      <CardHeader className="flex flex-row items-center justify-between pb-3">
         <div className="flex items-center gap-2">
           <Truck size={18} className="text-blue-400" />
-          <span className="text-white font-semibold">Vehicle Compliance</span>
+          <CardTitle className="text-white text-base font-semibold">Vehicle Compliance</CardTitle>
         </div>
         <Link href="/vehicles" className="text-blue-400 text-sm hover:underline">View all vehicles</Link>
-      </div>
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <Card className="bg-slate-900 border-slate-800">
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="text-slate-400 text-sm font-medium">Total Vehicles</CardTitle>
-          <Truck size={18} className="text-blue-400" />
-        </CardHeader>
-        <CardContent>
-          <p className="text-3xl font-bold text-white">{vehicles?.length ?? 0}</p>
-          <p className="text-slate-500 text-xs mt-1">in your fleet</p>
-        </CardContent>
-      </Card>
-      <ComplianceHoverTile variant="overdue"  items={overdue} />
-      <ComplianceHoverTile variant="due-week" items={dueWeek} extraCount={dueMonth.length} />
-    </div>
-    </div>
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-3 gap-4">
+          <div style={{ borderRadius: 12, backgroundColor: '#0f172a', boxShadow: '0 0 0 1px rgba(255,255,255,0.1)', padding: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+              <p style={{ color: '#94a3b8', fontSize: 14, fontWeight: 500, margin: 0 }}>Total Vehicles</p>
+              <Truck size={18} color="#60a5fa" />
+            </div>
+            <p style={{ fontSize: 30, fontWeight: 700, color: '#fff', margin: 0 }}>{vehicles?.length ?? 0}</p>
+            <p style={{ color: '#64748b', fontSize: 12, marginTop: 4 }}>in your fleet</p>
+          </div>
+          <ComplianceHoverTile variant="overdue"  items={overdue} />
+          <ComplianceHoverTile variant="due-week" items={dueWeek} extraCount={dueMonth.length} />
+        </div>
+      </CardContent>
+    </Card>
   )
 
   const driverComplianceTile = (
-    <div>
-      <div className="flex items-center justify-between mb-3">
+    <Card className="bg-slate-900 border-slate-800 h-full">
+      <CardHeader className="flex flex-row items-center justify-between pb-3">
         <div className="flex items-center gap-2">
           <Users size={18} className="text-blue-400" />
-          <span className="text-white font-semibold">Driver Compliance</span>
+          <CardTitle className="text-white text-base font-semibold">Driver Compliance</CardTitle>
         </div>
         <Link href="/drivers" className="text-blue-400 text-sm hover:underline">View all drivers</Link>
-      </div>
-      {activeDrivers.length === 0 ? (
-        <div className="text-center py-6">
-          <Users size={32} className="text-slate-600 mx-auto mb-2" />
-          <p className="text-slate-400 text-sm">No active drivers in your fleet</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-4 gap-4">
-          <DriverComplianceHoverTile variant="active"         count={activeDrivers.length} />
-          <DriverComplianceHoverTile variant="ok"             count={driverOk} />
-          <DriverComplianceHoverTile variant="due_this_month" count={driverDueMonth} items={dueMonthDriverItems} />
-          <DriverComplianceHoverTile variant="overdue"        count={driverOverdue}  items={overdueDriverItems} />
-        </div>
-      )}
-    </div>
+      </CardHeader>
+      <CardContent>
+        {activeDrivers.length === 0 ? (
+          <div className="text-center py-6">
+            <Users size={32} className="text-slate-600 mx-auto mb-2" />
+            <p className="text-slate-400 text-sm">No active drivers in your fleet</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-4 gap-4">
+            <DriverComplianceHoverTile variant="active"         count={activeDrivers.length} />
+            <DriverComplianceHoverTile variant="ok"             count={driverOk} />
+            <DriverComplianceHoverTile variant="due_this_month" count={driverDueMonth} items={dueMonthDriverItems} />
+            <DriverComplianceHoverTile variant="overdue"        count={driverOverdue}  items={overdueDriverItems} />
+          </div>
+        )}
+      </CardContent>
+    </Card>
   )
 
   const maintenanceTile = scheduledMaint && scheduledMaint.length > 0 ? (

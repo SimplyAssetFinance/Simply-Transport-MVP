@@ -34,6 +34,36 @@ function MapEvents({
   return null
 }
 
+// ── Relative date helper ─────────────────────────────────────────────────────
+function formatPriceAge(updated: string): string {
+  // NSW format: "27/03/2026 01:15:46"   (dd/mm/yyyy HH:MM:SS)
+  // QLD/SA:     "2026-03-27T14:30:00Z"  (ISO 8601 UTC)
+  let date: Date | null = null
+
+  if (/^\d{2}\/\d{2}\/\d{4}/.test(updated)) {
+    // dd/mm/yyyy HH:MM:SS — parse manually
+    const [d, m, y] = updated.split(' ')[0].split('/').map(Number)
+    const [h, min, s] = (updated.split(' ')[1] ?? '00:00:00').split(':').map(Number)
+    date = new Date(Date.UTC(y, m - 1, d, h, min, s ?? 0))
+  } else {
+    date = new Date(updated)
+  }
+
+  if (!date || isNaN(date.getTime())) return ''
+
+  const now   = Date.now()
+  const diffMs = now - date.getTime()
+  const diffH  = diffMs / (1000 * 60 * 60)
+  const diffD  = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+
+  if (diffH < 2)  return 'Set in the last 2 hours'
+  if (diffH < 24) return `Set today`
+  if (diffD === 1) return 'Set yesterday'
+  if (diffD < 7)  return `Set ${diffD} days ago`
+  if (diffD < 14) return 'Set last week'
+  return `Set ${Math.round(diffD / 7)} weeks ago`
+}
+
 // ── State centres ────────────────────────────────────────────────────────────
 const STATE_CENTERS: Record<string, [number, number]> = {
   nsw: [-33.8688, 151.2093],
@@ -419,9 +449,9 @@ export default function FuelMap({ fuelCards }: Props) {
                         </div>
                       )}
 
-                      {s.updated && (
+                      {s.updated && formatPriceAge(s.updated) && (
                         <p className="text-xs text-gray-400 pt-1 border-t border-gray-100">
-                          Price last changed: {s.updated.split('T')[0].split(' ')[0]}
+                          {formatPriceAge(s.updated)}
                         </p>
                       )}
                     </div>

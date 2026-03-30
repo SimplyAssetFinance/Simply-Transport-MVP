@@ -2,7 +2,7 @@
   "crons": [
     {
       "path": "/api/cron/scrape-tgp",
-      "schedule": "0 20 * * 1-5"
+      "schedule": "0 20 * * 0-4"
     },
     {
       "path": "/api/send-reminders",

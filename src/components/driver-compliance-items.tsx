@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from 'sonner'
 import { Plus, Pencil, Trash2, X, Check } from 'lucide-react'
+import { RenewComplianceButton } from '@/components/renew-compliance-button'
 import { format, parseISO } from 'date-fns'
 import type { DriverComplianceItem } from '@/lib/types'
 import { COMPLIANCE_ITEM_TYPES, itemComplianceStatus } from '@/lib/types'
@@ -154,6 +155,17 @@ export function DriverComplianceItems({ driverId, userId, driverName }: Props) {
                 {item.notes && <p className="text-slate-500 text-xs mt-1">{item.notes}</p>}
               </div>
               <div className="flex items-center gap-1 ml-3 shrink-0">
+                {item.expiry_date && (
+                  <RenewComplianceButton
+                    entityType="driver"
+                    entityId={driverId}
+                    entityName={driverName}
+                    complianceType={item.item_type}
+                    itemId={item.id}
+                    currentExpiry={item.expiry_date}
+                    onSuccess={load}
+                  />
+                )}
                 <button onClick={() => startEdit(item)} className="p-1.5 text-slate-400 hover:text-white rounded">
                   <Pencil size={14} />
                 </button>

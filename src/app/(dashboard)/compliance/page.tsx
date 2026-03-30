@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { getComplianceItems } from '@/lib/utils/compliance'
 import { ComplianceBadge } from '@/components/compliance-badge'
+import { RenewComplianceButton } from '@/components/renew-compliance-button'
 import { ShieldCheck, Users } from 'lucide-react'
 import { format, parseISO, differenceInDays } from 'date-fns'
 import type { Vehicle, Driver, DriverComplianceItem } from '@/lib/types'
@@ -38,7 +39,7 @@ export default async function CompliancePage() {
   const allDrivers      = (driversRaw     as Driver[])               || []
   const allDriverItems  = (driverItemsRaw as DriverComplianceItem[]) || []
 
-  type DriverItemRow = { driverName: string; driverId: string; item_type: string; expiry_date: string; daysUntil: number; status: 'overdue' | 'due_soon' | 'ok' }
+  type DriverItemRow = { itemId: string; driverName: string; driverId: string; item_type: string; expiry_date: string; daysUntil: number; status: 'overdue' | 'due_soon' | 'ok' }
   const driverRows: DriverItemRow[] = []
   for (const item of allDriverItems) {
     if (!item.expiry_date) continue
@@ -46,7 +47,7 @@ export default async function CompliancePage() {
     if (!driver) continue
     const days = differenceInDays(parseISO(item.expiry_date), today)
     const status: DriverItemRow['status'] = days < 0 ? 'overdue' : days <= 30 ? 'due_soon' : 'ok'
-    driverRows.push({ driverName: `${driver.first_name} ${driver.last_name}`, driverId: driver.id, item_type: item.item_type, expiry_date: item.expiry_date, daysUntil: days, status })
+    driverRows.push({ itemId: item.id, driverName: `${driver.first_name} ${driver.last_name}`, driverId: driver.id, item_type: item.item_type, expiry_date: item.expiry_date, daysUntil: days, status })
   }
   const dOverdue  = driverRows.filter(r => r.status === 'overdue')
   const dDueSoon  = driverRows.filter(r => r.status === 'due_soon')
@@ -98,26 +99,31 @@ export default async function CompliancePage() {
               </CardHeader>
               <CardContent className="space-y-2">
                 {sItems.map((item, i) => (
-                  <Link key={i} href={`/vehicles/${item.vehicleId}`}>
-                    <div className="flex items-center justify-between p-3 bg-slate-800 rounded-lg hover:bg-slate-700 transition-colors cursor-pointer">
-                      <div className="flex items-center gap-4">
-                        <div>
-                          <p className="text-white font-medium text-sm">{item.vehicleName}</p>
-                          <p className="text-slate-400 text-xs">{item.plate}</p>
-                        </div>
-                        <div>
-                          <p className="text-slate-300 text-sm">{TYPE_LABELS[item.type]}</p>
-                          <p className="text-slate-500 text-xs">{format(parseISO(item.dueDate), 'd MMM yyyy')}</p>
-                        </div>
+                  <div key={i} className="flex items-center justify-between p-3 bg-slate-800 rounded-lg">
+                    <Link href={`/vehicles/${item.vehicleId}`} className="flex items-center gap-4 flex-1 min-w-0 hover:opacity-80 transition-opacity">
+                      <div>
+                        <p className="text-white font-medium text-sm">{item.vehicleName}</p>
+                        <p className="text-slate-400 text-xs">{item.plate}</p>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <span className="text-slate-400 text-xs">
-                          {item.daysUntil < 0 ? `${Math.abs(item.daysUntil)}d overdue` : item.daysUntil === 0 ? 'Today' : `${item.daysUntil}d`}
-                        </span>
-                        <ComplianceBadge status={item.status} />
+                      <div>
+                        <p className="text-slate-300 text-sm">{TYPE_LABELS[item.type]}</p>
+                        <p className="text-slate-500 text-xs">{format(parseISO(item.dueDate), 'd MMM yyyy')}</p>
                       </div>
+                    </Link>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-slate-400 text-xs">
+                        {item.daysUntil < 0 ? `${Math.abs(item.daysUntil)}d overdue` : item.daysUntil === 0 ? 'Today' : `${item.daysUntil}d`}
+                      </span>
+                      <ComplianceBadge status={item.status} />
+                      <RenewComplianceButton
+                        entityType="vehicle"
+                        entityId={item.vehicleId}
+                        entityName={`${item.vehicleName} (${item.plate})`}
+                        complianceType={item.type}
+                        currentExpiry={item.dueDate}
+                      />
                     </div>
-                  </Link>
+                  </div>
                 ))}
               </CardContent>
             </Card>
@@ -164,22 +170,28 @@ export default async function CompliancePage() {
               </CardHeader>
               <CardContent className="space-y-2">
                 {rows.map((row, i) => (
-                  <Link key={i} href={`/drivers/${row.driverId}`}>
-                    <div className="flex items-center justify-between p-3 bg-slate-800 rounded-lg hover:bg-slate-700 transition-colors cursor-pointer">
-                      <div>
-                        <p className="text-white font-medium text-sm">{row.driverName}</p>
-                        <p className="text-slate-400 text-xs">{row.item_type}</p>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className="text-slate-400 text-xs">
-                          {row.daysUntil < 0 ? `${Math.abs(row.daysUntil)}d overdue` : row.daysUntil === 0 ? 'Today' : `${row.daysUntil}d`}
-                        </span>
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${badgeClass}`}>
-                          {format(parseISO(row.expiry_date), 'd MMM yyyy')}
-                        </span>
-                      </div>
+                  <div key={i} className="flex items-center justify-between p-3 bg-slate-800 rounded-lg">
+                    <Link href={`/drivers/${row.driverId}`} className="flex-1 min-w-0 hover:opacity-80 transition-opacity">
+                      <p className="text-white font-medium text-sm">{row.driverName}</p>
+                      <p className="text-slate-400 text-xs">{row.item_type}</p>
+                    </Link>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-slate-400 text-xs">
+                        {row.daysUntil < 0 ? `${Math.abs(row.daysUntil)}d overdue` : row.daysUntil === 0 ? 'Today' : `${row.daysUntil}d`}
+                      </span>
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${badgeClass}`}>
+                        {format(parseISO(row.expiry_date), 'd MMM yyyy')}
+                      </span>
+                      <RenewComplianceButton
+                        entityType="driver"
+                        entityId={row.driverId}
+                        entityName={row.driverName}
+                        complianceType={row.item_type}
+                        itemId={row.itemId}
+                        currentExpiry={row.expiry_date}
+                      />
                     </div>
-                  </Link>
+                  </div>
                 ))}
               </CardContent>
             </Card>

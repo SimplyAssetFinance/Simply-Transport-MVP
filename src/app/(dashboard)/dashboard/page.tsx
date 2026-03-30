@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { getComplianceItems } from '@/lib/utils/compliance'
 import { ComplianceBadge } from '@/components/compliance-badge'
 import { Truck, ShieldCheck, Wrench, DollarSign, FileWarning, Users } from 'lucide-react'
+import { RenewComplianceButton } from '@/components/renew-compliance-button'
 import { ComplianceHoverTile } from '@/components/compliance-hover-tile'
 import { DriverComplianceHoverTile } from '@/components/driver-compliance-hover-tile'
 import { FuelSpendTile } from '@/components/fuel-spend-tile'
@@ -276,11 +277,20 @@ export default async function DashboardPage() {
         ) : (
           urgentItems.map((item, i) => (
             <div key={i} className="flex items-center justify-between p-3 bg-slate-800 rounded-lg">
-              <div>
+              <div className="flex-1 min-w-0">
                 <p className="text-white text-sm font-medium">{item.vehicleName}</p>
                 <p className="text-slate-400 text-xs capitalize">{item.type} · {format(parseISO(item.dueDate), 'd MMM yyyy')}</p>
               </div>
-              <ComplianceBadge status={item.status} />
+              <div className="flex items-center gap-2 shrink-0">
+                <ComplianceBadge status={item.status} />
+                <RenewComplianceButton
+                  entityType="vehicle"
+                  entityId={item.vehicleId}
+                  entityName={`${item.vehicleName} (${item.plate})`}
+                  complianceType={item.type}
+                  currentExpiry={item.dueDate}
+                />
+              </div>
             </div>
           ))
         )}

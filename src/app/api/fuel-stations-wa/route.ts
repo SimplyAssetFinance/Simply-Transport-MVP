@@ -77,7 +77,7 @@ export async function GET(request: NextRequest) {
 
       stations.push({
         id:      `wa-${i}`,
-        name:    getTag(block, 'trading_name'),
+        name:    getTag(block, 'trading-name'),
         brand:   getTag(block, 'brand'),
         address: [address, suburb].filter(Boolean).join(', '),
         lat,

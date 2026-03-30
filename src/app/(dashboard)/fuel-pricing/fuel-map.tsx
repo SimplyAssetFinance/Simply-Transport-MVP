@@ -334,6 +334,18 @@ export default function FuelMap({ fuelCards }: Props) {
         )}
       </div>
 
+      {/* Station count / live indicator */}
+      <div className="flex items-center gap-2 text-xs text-slate-400">
+        <span className="flex items-center gap-1.5">
+          <span className="w-2 h-2 rounded-full bg-green-500 inline-block animate-pulse" />
+          Live board prices
+        </span>
+        {stations.length > 0 && !loading && (
+          <span className="text-slate-500">· {stations.length} stations loaded</span>
+        )}
+        {loading && <span className="text-slate-500">· Loading…</span>}
+      </div>
+
       {/* Map container */}
       <div className="relative rounded-xl overflow-hidden border border-slate-700">
         {loading && (
@@ -407,16 +419,9 @@ export default function FuelMap({ fuelCards }: Props) {
                         </div>
                       )}
 
-                      {/* DEBUG — remove after diagnosis */}
-                      {cardAppliesToSite('Shell', s.brand) && (
-                        <p className="text-[10px] text-blue-500 pt-1 border-t border-gray-100">
-                          NTN: {isNTNSite(s.lat, s.lng) ? '✅ matched' : `❌ nearest ${(nearestNTNMetres(s.lat, s.lng) / 1000).toFixed(1)}km`}
-                        </p>
-                      )}
-
                       {s.updated && (
                         <p className="text-xs text-gray-400 pt-1 border-t border-gray-100">
-                          Updated {s.updated}
+                          Price last changed: {s.updated.split('T')[0].split(' ')[0]}
                         </p>
                       )}
                     </div>

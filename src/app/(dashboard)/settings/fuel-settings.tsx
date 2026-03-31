@@ -25,6 +25,7 @@ const BLANK_FORM: FormState = {
 
 export function FuelSettings() {
   const [cards,  setCards]  = useState<FuelCard[]>([])
+  const [snapshotFrequencyHours, setSnapshotFrequencyHours] = useState(24)
   const [saving, setSaving] = useState(false)
   const [loaded, setLoaded] = useState(false)
   const [modal,  setModal]  = useState<ModalState>({ open: false })
@@ -53,7 +54,12 @@ export function FuelSettings() {
     if (!user) { setSaving(false); return }
     const { error } = await sb
       .from('user_fuel_settings')
-      .upsert({ user_id: user.id, fuel_cards: next, updated_at: new Date().toISOString() })
+      .upsert({
+        user_id: user.id,
+        fuel_cards: next,
+        snapshot_frequency_hours: snapshotFrequencyHours,
+        updated_at: new Date().toISOString(),
+      })
     if (error) toast.error('Failed to save')
     else { setCards(next); toast.success('Saved') }
     setSaving(false)
@@ -64,6 +70,26 @@ export function FuelSettings() {
     const first = FUEL_CARD_OPTIONS.find(p => !taken.includes(p)) ?? 'Shell'
     setForm({ ...BLANK_FORM, provider: first })
     setModal({ open: true, mode: 'add' })
+  }
+
+  async function saveFrequency(hours: number) {
+    setSaving(true)
+    const sb = createClient()
+    const { data: { user } } = await sb.auth.getUser()
+    if (!user) { setSaving(false); return }
+
+    const { error } = await sb
+      .from('user_fuel_settings')
+      .upsert({
+        user_id: user.id,
+        snapshot_frequency_hours: hours,
+        fuel_cards: cards,
+        updated_at: new Date().toISOString(),
+      })
+
+    if (error) toast.error('Failed to save')
+    else toast.success('Snapshot frequency saved')
+    setSaving(false)
   }
 
   function openEdit(i: number) {
@@ -203,6 +229,46 @@ export function FuelSettings() {
       </Card>
 
       {/* Add / Edit modal */}
+      <Card className="bg-slate-900 border-slate-800">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-white flex items-center gap-2 text-base">
+              <Fuel size={18} className="text-green-400" />
+              Fuel Snapshot Schedule
+            </CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <p className="text-slate-400 text-sm mb-4">
+            Capture terminal gate prices automatically on a schedule that fits your fleet.
+          </p>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+            <label className="flex-1">
+              <span className="text-slate-400 text-xs block mb-1.5">Snapshot interval (hours)</span>
+              <input
+                type="number"
+                min={1}
+                max={168}
+                step={1}
+                value={snapshotFrequencyHours}
+                onChange={e => setSnapshotFrequencyHours(Number(e.target.value) || 1)}
+                className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </label>
+            <button
+              onClick={() => saveFrequency(snapshotFrequencyHours)}
+              disabled={saving}
+              className="w-full sm:w-auto px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors"
+            >
+              {saving ? 'Saving…' : 'Save Interval'}
+            </button>
+          </div>
+          <p className="text-slate-600 text-xs mt-3">
+            The cron job runs hourly and stores fuel price snapshots when your configured interval has elapsed.
+          </p>
+        </CardContent>
+      </Card>
+
       {modal.open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/60" onClick={() => setModal({ open: false })} />

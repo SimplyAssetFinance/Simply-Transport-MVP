@@ -11,6 +11,34 @@ function getAdminClient() {
   )
 }
 
+const DEFAULT_FUEL_SNAPSHOT_HOURS = 24
+
+async function getSnapshotFrequencyHours(sb: any): Promise<number> {
+  const { data, error } = await sb
+    .from('user_fuel_settings')
+    .select('snapshot_frequency_hours')
+
+  if (error || !data || data.length === 0) return DEFAULT_FUEL_SNAPSHOT_HOURS
+
+  const hours = data
+    .map((row: any) => Number(row.snapshot_frequency_hours))
+    .filter((value: number) => Number.isFinite(value) && value >= 1)
+
+  return hours.length > 0 ? Math.max(1, Math.min(...hours)) : DEFAULT_FUEL_SNAPSHOT_HOURS
+}
+
+async function getLastSnapshotAt(sb: any): Promise<string | null> {
+  const { data, error } = await sb
+    .from('fuel_price_snapshots')
+    .select('snapshot_at')
+    .order('snapshot_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (error || !data) return null
+  return data.snapshot_at as string | null
+}
+
 // ── Terminal name maps ────────────────────────────────────────────────────────
 
 const VIVA_TERMINAL_MAP: Record<string, string> = {
@@ -225,6 +253,23 @@ export async function GET(request: Request) {
   }
 
   try {
+    const sb = getAdminClient()
+    const snapshotFrequencyHours = await getSnapshotFrequencyHours(sb)
+    const lastSnapshotAt = await getLastSnapshotAt(sb)
+
+    if (lastSnapshotAt) {
+      const hoursSince = (Date.now() - new Date(lastSnapshotAt).getTime()) / 1000 / 60 / 60
+      if (hoursSince < snapshotFrequencyHours) {
+        return NextResponse.json({
+          ok: true,
+          skipped: true,
+          snapshot_frequency_hours: snapshotFrequencyHours,
+          last_snapshot_at: lastSnapshotAt,
+          next_snapshot_due_at: new Date(new Date(lastSnapshotAt).getTime() + snapshotFrequencyHours * 3600000).toISOString(),
+        })
+      }
+    }
+
     const today = new Date().toISOString().split('T')[0]
 
     const [vivaData, aipData, ampolData, iorData] = await Promise.all([
@@ -275,15 +320,24 @@ export async function GET(request: Request) {
     }
 
     const sb = getAdminClient()
-    const { error } = await sb
+    const { error: upsertError } = await sb
       .from('tgp_prices')
       .upsert(rows, { onConflict: 'date,terminal' })
 
-    if (error) throw error
+    if (upsertError) throw upsertError
+
+    const snapshotAt = new Date().toISOString()
+    const snapshotRows = rows.map(row => ({ ...row, snapshot_at: snapshotAt }))
+    const { error: snapshotError } = await sb
+      .from('fuel_price_snapshots')
+      .insert(snapshotRows)
+
+    if (snapshotError) throw snapshotError
 
     return NextResponse.json({
       ok: true,
       date: today,
+      snapshot_at: snapshotAt,
       terminals: rows.length,
       sources: {
         viva:  Object.keys(vivaData).length,

@@ -31,6 +31,17 @@ export interface TGPPrice {
   spread: number | null
 }
 
+export interface UserFuelSettings {
+  user_id: string
+  fuel_cards: FuelCard[]
+  snapshot_frequency_hours: number
+  updated_at: string
+}
+
+export interface FuelPriceSnapshot extends TGPPrice {
+  snapshot_at: string
+}
+
 export type ComplianceStatus = 'overdue' | 'due-week' | 'due-month' | 'ok'
 
 export interface ComplianceItem {
